@@ -1,0 +1,75 @@
+@startuml components diagram
+' Use UML2 component style
+skinparam componentStyle uml2
+
+' External Moodle system
+component "Moodle Web Services\n(REST API)" as MoodleAPI <<interface>>
+component "Moodle LMS" as Moodle <<system>>
+
+Moodle --> MoodleAPI : uses
+
+' Frontend package
+package "Frontend" {
+  component "Report Viewer" as ReportViewer <<boundary>>
+  component "Agent Configurator" as AgentConfigurator <<boundary>>
+}
+
+' Backend package
+package "Backend" {
+  component "UI Controller" as UIController <<controller>>
+  component "Reports Repository" as ReportsRepo <<datastore>>
+  
+  component "Middleware" as Middleware <<component>>
+  component "Moodle Controller" as MoodleController <<controller>>
+  component "Message Dispatcher" as MessageDispatcher <<component>>
+  component "Context Builder" as ContextBuilder <<component>>
+  component "Memory Repository" as MemoryRepository <<datastore>>
+  component "Action Reporter" as ActionReporter <<component>>
+
+  component "Intent Classifier Agent" as IntentAgent <<component>>
+  component "Professor Agent" as ProfessorAgent <<component>>
+  component "Proactive Engine" as ProactiveEngine <<component>>
+}
+
+' Memory stores
+package "Memory Stores" {
+  database "Structured Memory DB" as StructuredDB <<database>>
+  database "Vector Memory DB" as VectorDB <<database>>
+}
+
+' Frontend → Backend interactions
+ReportViewer --> UIController : "fetch reports"
+AgentConfigurator --> UIController : "upload config"
+
+UIController --> ReportsRepo : "read/write reports"
+UIController --> IntentAgent : "deploy config"
+
+' Middleware flow
+MoodleController --> MoodleAPI : "GET / POST"
+
+
+MoodleController --> Middleware : "raw input"
+Middleware --> IntentAgent : "raw input for classification"
+Middleware --> ContextBuilder : "classified input for context building"
+Middleware --> ProfessorAgent : "invoke professor agent with built context"
+Middleware --> MemoryRepository : "save memory summary & metadata"
+Middleware --> MessageDispatcher : "professor agent response"
+
+
+ContextBuilder --> MemoryRepository : "get memory data"
+
+MessageDispatcher --> MoodleController : "call get/post proper controller method"
+
+MemoryRepository --> StructuredDB : "save record"
+MemoryRepository --> VectorDB : "save embedding"
+
+ProfessorAgent --> ActionReporter : "log action"
+ActionReporter --> ReportsRepo : "store report"
+ReportsRepo --> StructuredDB : "save report record"
+
+' Proactive engine triggers
+ProactiveEngine --> MessageDispatcher : "scheduled triggers" 
+ProactiveEngine --> ContextBuilder : "get context data"
+ProactiveEngine --> ProfessorAgent : "trigger professor response with context"
+
+@enduml

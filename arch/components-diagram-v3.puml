@@ -1,0 +1,89 @@
+@startuml 
+title Components Diagram
+' Use UML2 component style
+skinparam componentStyle uml2
+
+
+actor "Professor" as ProfessorActor
+actor "Student" as StudentActor
+
+package "External Services" {
+    interface "Moodle Web Services\n(REST API)" as MoodleAPI
+    component "Moodle LMS" as Moodle <<external service>>
+    Moodle ..> MoodleAPI : <<use>>  
+    component "Ollama LLM Service" as OllamaLLM <<external service>>
+}
+
+
+StudentActor ..> Moodle : <<interaction>> create content
+
+' Frontend package
+package "Frontend" {
+  boundary "Report Viewer"           as ReportViewer
+  boundary "Agent Configurator"      as AgentConfigurator
+
+  ProfessorActor ..> ReportViewer : <<interaction>> view reports
+  ProfessorActor ..> AgentConfigurator : <<interaction>> upload config
+}
+
+' Backend package
+package "Backend" {
+  control  "UI Controller"           as UIController
+  entity   "Reports Repository"      as ReportsRepo
+  component "Orchestrator"              as Orchestrator <<component>>
+  control  "Moodle Controller"       as MoodleController
+  component "Message Dispatcher"     as MessageDispatcher <<component>>
+  entity   "Memory Repository"       as MemoryRepository
+  component "Action Reporter"        as ActionReporter <<component>>
+
+  'LLM-backed agent components
+  component "Intent Classifier Agent" as IntentAgent <<LLM-powered component>>
+  component "Professor Agent"         as ProfessorAgent <<LLM-powered component>>  
+  ' Dependency relationships to Ollama
+  IntentAgent ..> OllamaLLM : <<use>> inference
+  ProfessorAgent ..> OllamaLLM : <<use>> inference
+
+  component "Proactive Engine"        as ProactiveEngine <<component>>
+}
+
+
+' Memory stores
+package "Memory Stores" {
+  database "Structured Memory DB"    as StructuredDB
+  database "Vector Memory DB"        as VectorDB
+}
+
+' Frontend → Backend interactions
+UIController ..> ReportViewer       : <<data>> reports
+AgentConfigurator ..> UIController   : <<data>> data config to be deployed
+
+ReportsRepo ..> UIController       : <<data>> reports
+UIController ..> ProfessorAgent        : <<data>> data config to be deployed
+
+' Orchestrator flow
+MoodleController ..> MoodleAPI      : <<use>> REST GET/POST
+
+MoodleController ..> Orchestrator     : <<data>> raw input
+Orchestrator ..> IntentAgent           : <<data>> raw input for classification
+Orchestrator ..> ProfessorAgent       : <<data>> classified input
+Orchestrator ..> MemoryRepository     : <<data>>  summary & metadata to be saved
+ProfessorAgent ..> Orchestrator : <<data>> suggested actions
+Orchestrator ..> MessageDispatcher : <<data>> suggested actions
+MessageDispatcher ..> MoodleController : <<data>> filtered actions
+
+
+' Professor Agent flow
+MemoryRepository ..> ProfessorAgent : <<data>> context data
+MoodleController ..> ProfessorAgent : <<data>> extra data based on professor request
+
+MemoryRepository ..> StructuredDB   : <<data>> structured data to be saved
+MemoryRepository ..> VectorDB       : <<data>> embedding data to be saved
+
+Orchestrator ..> ActionReporter  : <<data>> actions taken
+ActionReporter ..> ReportsRepo     : <<data>> reports data to be saved
+ReportsRepo ..> StructuredDB       : <<data>> structured reports data
+
+' Proactive engine triggers
+ProactiveEngine ..> Orchestrator : <<data>> scheduled triggers
+
+@enduml

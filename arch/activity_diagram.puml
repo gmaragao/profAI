@@ -1,0 +1,66 @@
+@startuml
+title Activity Diagram – Professor Agent Workflow
+
+start
+
+:Check trigger type;
+if (Run new actions -- forced by professor?) then (yes)
+  :Get updates on forum;
+  :Call Orchestrator;
+  :Call Intent Classifier Agent;
+  :Call Orchestrator;
+  goto professorAgentFlow
+elseif (Proactive trigger?) then (yes)
+  :Get pending actions from db;
+  if(Pending actions to trigger?) then (yes)
+    goto messageEvaluation
+  else (no)
+    :No new actions to trigger;
+    :Get updates on forum;
+endif
+
+label professorAgentFlow
+:Call Professor Agent;
+if(Agent suggests actions?) then (yes)
+  :Create suggested actions with confidence and priority level;
+  :Call MessageDispatcher;
+
+  label messageEvaluation
+  if(Message in MessageDispatcher has confidence > 0.7?) then (yes)
+    :Evaluate priority level;
+    if (priority > 0.7) then (yes)
+      :Dispatch message (message, alert, DM);
+    else (no)
+        if (Is action counter tries > 3 or date to trigger >= now) then (yes)
+          :Dispatch message (message, alert, DM);
+        else (no)
+          :Increase action counter tries;
+          :Save action in memory to be dispatched later (possibly with date to trigger);
+        endif
+        :Save action in memory to be dispatched later (possibly with date to trigger); 
+    endif
+  else (no)
+    :Discard message;
+endif
+
+:Query Moodle (assignments, posts, grades);
+:Fetch structured memory;
+:Fetch vector memory;
+
+:Construct MCP with context;
+
+:Call Professor Agent with MCP;
+
+:Generate response;
+if (Agent suggests actions?) then (yes)
+  :Extract suggested actions;
+  :Dispatch actions (message, alert, DM);
+endif
+
+:Send response to Moodle;
+
+:Write memory summary;
+:Log action (studentId, intent, output, action);
+
+stop
+@enduml
