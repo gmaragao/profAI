@@ -14,9 +14,7 @@ export class IntentAgent {
     "utf-8"
   );
 
-  async processPrompt(
-    prompt: string
-  ): Promise<{ intent: string; summary: string }> {
+  async processPrompt(prompt: string): Promise<any> {
     try {
       const response = await axios.post(
         `${this.apiUrl}/generate`,
@@ -34,12 +32,7 @@ export class IntentAgent {
 
       const data = response.data.response;
 
-      console.log("data from ollama: ", data);
-      const [intent, summary] = data
-        .split("\n")
-        .map((line: string) => line.trim());
-
-      return { intent, summary };
+      return data;
     } catch (error) {
       console.error("Error processing prompt with Ollama:", error);
       throw error;

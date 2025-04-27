@@ -12,7 +12,7 @@ export class IntentClassifier {
     for (const post of response.posts) {
       const formattedPost = {
         userId: post.author.id,
-        courseName: post.subject,
+        courseId: response.courseid,
         inputText: post.message,
         forumId: response.forumid,
         postId: post.id,
@@ -21,7 +21,7 @@ export class IntentClassifier {
         message: post.message,
       };
 
-      const prompt = JSON.stringify(post);
+      const prompt = JSON.stringify(formattedPost);
 
       console.log("Prompt to Ollama: ", post.message);
       const agentResponse = await this.intentAgent.processPrompt(prompt);

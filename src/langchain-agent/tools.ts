@@ -34,7 +34,7 @@ export const FetchCourseInformation = tool(
   {
     name: "fetchCourseInformation",
     description:
-      "Call to retrieve course information. Including course structure, assignments, and grades.",
+      "Call to retrieve course information. Including course structure, assignments, grades and dates.",
     schema: z.object({
       courseId: z.string(),
     }),

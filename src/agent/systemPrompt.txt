@@ -32,27 +32,27 @@ Your tasks are:
 Input:
 ```json
 {
-    userId: "number",
-    courseName: "string",
-    inputText: "string",
-    forumId: "number",
-    postId: "number",
-    source: "string", // "message" or "action"
-    subject: "string",
-    message: "string",
+   userId: "string",
+   courseName: "string,
+   inputText: "string,
+   forumId: "string,
+   postId: "string,
+   source: "string,
+   subject: "string,
+   message: "string,
 }
 ```
 
 Output format:
 ```json
-classifiedData: {
-    "studentId": "string",
+{
+    "userId": "string",
     "courseId": "string",
     "summarizedInput": "string",      
     "forumId": "string",
     "postId": "string",
     "intent": "string",
-    "source": "message|trigger" 
+    "source": "forum_post | direct_message" 
 }
 ```
 

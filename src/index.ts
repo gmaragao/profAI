@@ -24,13 +24,13 @@ import MemoryRepository from "./repository/memoryRepository";
 
   //proactiveEngine.run();
 
-  //const forumPosts = await moodleClient.getForumPosts("4");
+  const forumPosts = await moodleClient.getForumPosts("4");
 
-  /*   const classifiedPosts = await intentClassifier.classifyAndSummarizePosts(
+  const classifiedPosts = await intentClassifier.classifyAndSummarizePosts(
     forumPosts
-  ); */
+  );
 
-  const classifiedData = {
+  /*   const classifiedData = {
     userId: "3",
     courseId: "3",
     summarizedInput: "What is the date of the exam?",
@@ -39,11 +39,15 @@ import MemoryRepository from "./repository/memoryRepository";
     intent: "general_question",
     source: "forum_post",
   };
-
-  console.log("Classified Data: ", classifiedData);
-  const response = await professorAgent.invoke(classifiedData);
-  /*   for (const classifiedData of classifiedPosts) {
-    const response = await professorAgent.invoke(classifiedData);
+ */
+  //console.log("Classified Data: ", classifiedData);
+  //const response = await professorAgent.invoke(classifiedData);
+  for (const classifiedData of classifiedPosts) {
+    console.log("classifiedData: ", classifiedData);
+    // transform string from classifieidData into object
+    const parsedData = JSON.parse(classifiedData);
+    console.log("Parsed Data: ", parsedData);
+    const response = await professorAgent.invoke(parsedData);
     console.log("Response from agent: ", response);
-  } */
+  }
 })();

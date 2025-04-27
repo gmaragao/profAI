@@ -12,3 +12,5 @@
 -> MessageDispatcher vai ser assincrono para não sobrecarregar o sistema (filteredActions contém ações que vão ser tomadas no momento e ações que deverão ficar para depois de acordo com grau de importância para não sobrecarregar o sistema)
 
 ## Pendente --> alterar diagrama de sequência com novas implementações
+
+# Intent agent classifier ainda não está funcionando corretamente

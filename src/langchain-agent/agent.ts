@@ -59,7 +59,7 @@ class ProfessorAgent {
     4. NEVER ask the user for more details. Assume everything needed is already provided.
     5. Set the priority (0.0 to 1.0) based on the urgency of answering.
     6. Set the confidence (0.0 to 1.0) based on your certainty about the answer.
-    7. ALWAYS respond strictly in this JSON format:
+    7. ALWAYS respond strictly in this JSON format, even when you are not certain about the answer:
     
     {{
       "functionToBeCalled": {{
@@ -115,6 +115,7 @@ class ProfessorAgent {
       source: classifiedData.source,
     };
 
+    console.log("input variables:", inputVariables);
     const messages = await this.prompt.formatMessages({
       tools: this.tools,
       user_data: JSON.stringify(inputVariables),
