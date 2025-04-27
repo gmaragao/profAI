@@ -7,18 +7,32 @@ import { z } from "zod";
 const moodleClient = new MoodleClient();
 const memoryRepository = new MemoryRepository();
 
-export const FetchForumPostsTool = tool(moodleClient.getForumPosts, {
+/* export const FetchForumPostsTool = tool(moodleClient.getForumPosts, {
   name: "get_forum_posts",
   description: "Call to retrieve posts for a given forumId",
   schema: z.object({
     discussionId: z.string(),
   }),
-});
+}); */
+
+export const CreateAnswerOnPost = tool(
+  async ({ postId, content }: { postId: string; content: string }) =>
+    moodleClient.createAnswerOnPost(postId, content),
+  {
+    name: "createAnswerOnPost",
+    description:
+      "Call to create a new answer on a post. Provide the postId and content.",
+    schema: z.object({
+      postId: z.string(),
+      content: z.string(),
+    }),
+  }
+);
 
 export const FetchCourseInformation = tool(
   memoryRepository.getCourseInformation,
   {
-    name: "get_course_information",
+    name: "fetchCourseInformation",
     description:
       "Call to retrieve course information. Including course structure, assignments, and grades.",
     schema: z.object({
@@ -26,6 +40,15 @@ export const FetchCourseInformation = tool(
     }),
   }
 );
+
+export const SaveMemory = tool(memoryRepository.saveMemory, {
+  name: "saveMemory",
+  description:
+    "Call to save a short summary and metadata to structured + vector memory",
+  schema: z.object({
+    actionSummary: z.string(),
+  }),
+});
 
 /* // A tool for fetching a single student’s grade
 export const FetchGradeTool = new Tool({
@@ -50,3 +73,4 @@ export const WriteMemoryTool = new Tool({
   },
 });
  */
+export const toolsForPosting = [CreateAnswerOnPost];

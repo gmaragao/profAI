@@ -1,8 +1,5 @@
-import { ProfessorAgent } from "../agents/professorAgent";
-import { MessageDispatcher } from "../communication/messageDispatcher";
-import { ContextBuilder } from "../context/contextBuilder";
-import { MemoryRepository } from "../memory/memoryRepository";
-import { ActionReporter } from "../reporting/actionReporter";
+import { MoodleClient } from "@/moodleClient";
+import MemoryRepository from "@/repository/memoryRepository";
 import { IntentClassifier } from "./intentClassifier";
 
 export interface OrchestratorInput {
@@ -27,143 +24,66 @@ export interface ContextualizedInput extends ClassifiedInput {
   };
 }
 
-export interface SuggestedAction {
-  type: string;
-  payload: any;
-  priority: number;
-  metadata?: Record<string, any>;
-}
-
 export class Orchestrator {
   constructor(
     private intentClassifier: IntentClassifier,
-    private professorAgent: ProfessorAgent,
-    private contextBuilder: ContextBuilder,
     private memoryRepository: MemoryRepository,
-    private messageDispatcher: MessageDispatcher,
-    private actionReporter: ActionReporter
+    private moodleClient: MoodleClient
   ) {}
 
-  async processInput(input: OrchestratorInput): Promise<void> {
-    try {
-      // Step 1: Classify intent using IntentAgent
-      const classifiedInput = await this.classifyIntent(input);
+  runPendingActions = async (): Promise<void> => {
+    const pendingActions = await this.memoryRepository.getPendingActions();
 
-      // Step 2: Build context using ContextBuilder and MemoryRepository
-      //const contextualizedInput = await this.buildContext(classifiedInput);
+    pendingActions.forEach(async (action) => {
+      this.isActionDue(action)
+        ? await this.executeAction(action)
+        : console.log(
+            `Action ${action.id} is not due yet. Waiting for the next check.`
+          );
+    });
+  };
 
-      // Step 3: Process with ProfessorAgent to get suggested actions
-      //const suggestedActions = await this.generateActions(classifiedInput);
+  private isActionDue = (action: any): boolean => {
+    const currentTime = new Date();
+    const actionTime = new Date(action.dueDate);
+    const timeDiff = currentTime.getTime() - actionTime.getTime();
 
-      // Step 4: Dispatch actions through MessageDispatcher
-      // const dispatchResults = await this.dispatchActions(suggestedActions);
+    // Check if the action is due based on the specified interval
+    return timeDiff >= action.interval * 60 * 1000;
+  };
 
-      // Step 5: Save to memory
-      /* await this.saveToMemory(
-        contextualizedInput,
-        suggestedActions,
-        dispatchResults
-      ); */
+  // TODO -> Add an activity diagram to explain this part
+  // TODO -> Add this logic into the MessageDispatcher
+  private executeAction(action: any) {
+    if (action.type === "create_forum_post") {
+      console.log(`Executing action: ${action.id}`);
 
-      // Step 6: Report actions
-      //await this.reportActions(suggestedActions, dispatchResults);
-    } catch (error) {
-      console.error("Error in orchestration process:", error);
-      throw error;
+      // Logic to create a forum post
+      // Perform the action (e.g., send a notification)
+      // After executing, update the action status in the repository
+      this.memoryRepository.update("actions", action.id, {
+        status: "completed",
+      });
+    } else if (action.type === "create_new_answer_on_post") {
+      console.log(`Executing action: ${action.id}`);
+
+      // Logic to create a new forum post
+      this.moodleClient.createAnswerOnPost(action.postId, action.content);
+
+      // Perform the action (e.g., send a notification)
+      // After executing, update the action status in the repository
+      this.memoryRepository.update("actions", action.id, {
+        status: "completed",
+      });
+    } else if (action.type === "send_direct_message") {
+      console.log(`Executing action: ${action.id}`);
+
+      // Logic to send a direct message
+      // Perform the action (e.g., send a notification)
+      // After executing, update the action status in the repository
+      this.memoryRepository.update("actions", action.id, {
+        status: "completed",
+      });
     }
-  }
-  /* 
-  async handleProactiveTrigger(trigger: any): Promise<void> {
-    // Handle scheduled triggers from ProactiveEngine
-    const input: OrchestratorInput = {
-      rawInput: trigger.data,
-      metadata: {
-        triggerType: trigger.type,
-        triggerTime: new Date().toISOString(),
-        isProactive: true,
-        ...trigger.metadata,
-      },
-    };
-
-    return this.processInput(input);
-  }
- */
-  private async classifyIntent(input: OrchestratorInput): Promise<any> {
-    const classification =
-      await this.intentClassifier.classifyAndSummarizePosts(input.rawInput);
-
-    return {
-      ...input,
-      intent: classification.intent,
-      confidence: classification.confidence,
-      entities: classification.entities,
-    };
-  }
-
-  private async buildContext(
-    input: ClassifiedInput
-  ): Promise<ContextualizedInput> {
-    // Retrieve relevant memories
-    const memories = await this.memoryRepository.retrieveRelevantMemories(
-      input.intent,
-      input.entities,
-      input.userId,
-      input.courseId
-    );
-
-    // Build full context
-    const context = await this.contextBuilder.buildContext(input, memories);
-
-    return {
-      ...input,
-      context,
-    };
-  }
-
-  private async generateActions(
-    input: ContextualizedInput
-  ): Promise<SuggestedAction[]> {
-    return this.professorAgent.suggestActions(input);
-  }
-
-  private async dispatchActions(actions: SuggestedAction[]): Promise<any[]> {
-    return this.messageDispatcher.dispatchActions(actions);
-  }
-
-  private async saveToMemory(
-    input: ContextualizedInput,
-    actions: SuggestedAction[],
-    results: any[]
-  ): Promise<void> {
-    const summary = this.generateInteractionSummary(input, actions, results);
-
-    await this.memoryRepository.saveInteraction({
-      input,
-      actions,
-      results,
-      summary,
-      timestamp: new Date().toISOString(),
-    });
-  }
-
-  private generateInteractionSummary(
-    input: ContextualizedInput,
-    actions: SuggestedAction[],
-    results: any[]
-  ): string {
-    // Generate a concise summary of the interaction
-    // This could be done with a summarization method or by the professor agent
-    return `Processed ${input.intent} intent and executed ${actions.length} actions`;
-  }
-
-  private async reportActions(
-    actions: SuggestedAction[],
-    results: any[]
-  ): Promise<void> {
-    await this.actionReporter.reportActions({
-      actions,
-      results,
-      timestamp: new Date().toISOString(),
-    });
   }
 }

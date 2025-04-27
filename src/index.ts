@@ -1,42 +1,49 @@
 import { IntentAgent } from "./agent/intentAgent";
-import agent from "./langchain-agent/agent";
+import ProfessorAgent from "./langchain-agent/agent";
 import { IntentClassifier } from "./middleware/intentClassifier";
+import { Orchestrator } from "./middleware/orchestrator";
 import { MoodleClient } from "./moodleClient";
+import MemoryRepository from "./repository/memoryRepository";
 
 (async () => {
   //const agent = new LlmAgent();
-  //await agent.getCourseInformation();
+  const professorAgent = new ProfessorAgent();
   const intentAgent = new IntentAgent();
-  const intentDetector = new IntentClassifier();
+  //await agent.getCourseInformation();
+  const intentClassifier = new IntentClassifier(intentAgent);
   const moodleClient = new MoodleClient();
 
-  /*   const forumPosts = await moodleClient.getForumPosts("4");
-
-  const classifiedPosts = await intentDetector.classifyAndSummarizePosts(
-    forumPosts
+  const memoryRepository = new MemoryRepository();
+  const orchestrator = new Orchestrator(
+    intentClassifier,
+    memoryRepository,
+    moodleClient
   );
- */
-  const professorAgent = agent;
 
-  const classifiedDataString = JSON.stringify({
-    studentId: "3",
+  //const proactiveEngine = new ProactiveEngine(orchestrator);
+
+  //proactiveEngine.run();
+
+  //const forumPosts = await moodleClient.getForumPosts("4");
+
+  /*   const classifiedPosts = await intentClassifier.classifyAndSummarizePosts(
+    forumPosts
+  ); */
+
+  const classifiedData = {
+    userId: "3",
     courseId: "3",
-    summarizedInput:
-      "Student is asking for information about the course structure.",
+    summarizedInput: "What is the date of the exam?",
     forumId: "4",
     postId: "5",
-    intent: "subject_knowledge_question",
-    source: "message",
-  });
+    intent: "general_question",
+    source: "forum_post",
+  };
 
-  const response = await professorAgent.invoke({
-    messages: [
-      {
-        role: "user",
-        content: classifiedDataString,
-      },
-    ],
-  });
-
-  console.log("Response from agent: ", response);
+  console.log("Classified Data: ", classifiedData);
+  const response = await professorAgent.invoke(classifiedData);
+  /*   for (const classifiedData of classifiedPosts) {
+    const response = await professorAgent.invoke(classifiedData);
+    console.log("Response from agent: ", response);
+  } */
 })();

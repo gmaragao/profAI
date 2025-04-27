@@ -2,12 +2,12 @@ import { IntentAgent } from "@/agent/intentAgent";
 import { ForumPostsResponse } from "@/models/moodleTypes";
 
 export class IntentClassifier {
-  private intentAgent = new IntentAgent();
+  constructor(private intentAgent: IntentAgent) {}
 
   async classifyAndSummarizePosts(
     response: ForumPostsResponse
-  ): Promise<{ intent: string; summary: string }[]> {
-    const results: { intent: string; summary: string }[] = [];
+  ): Promise<any[]> {
+    const results = [];
 
     for (const post of response.posts) {
       const formattedPost = {
@@ -16,7 +16,7 @@ export class IntentClassifier {
         inputText: post.message,
         forumId: response.forumid,
         postId: post.id,
-        source: "message",
+        source: "forum_post",
         subject: post.subject,
         message: post.message,
       };

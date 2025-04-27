@@ -14,6 +14,7 @@ class MemoryRepository {
   }
 
   async getCourseInformation(courseId: string): Promise<any> {
+    console.log("this was called!");
     /*   const client = await this.pool.connect();
     try {
       const result = await client.query(
@@ -25,7 +26,7 @@ class MemoryRepository {
       client.release();
     } */
 
-    return "The course is related to Cinema and Psychology and the date of the exam is 2024-01-01";
+    return `The course with id ${courseId} is related to Cinema and Psychology and the date of the exam is 2024-01-01`;
   }
 
   async getAll(tableName: string): Promise<any[]> {
@@ -100,8 +101,24 @@ class MemoryRepository {
     }
   }
 
+  async getPendingActions(): Promise<any[]> {
+    const client = await this.pool.connect();
+    try {
+      const result = await client.query(
+        `SELECT * FROM actions WHERE status = 'pending'`
+      );
+      return result.rows;
+    } finally {
+      client.release();
+    }
+  }
+
   async close(): Promise<void> {
     await this.pool.end();
+  }
+
+  async saveMemory(actionSummary: string): Promise<void> {
+    console.log("Saving memory:", actionSummary);
   }
 }
 

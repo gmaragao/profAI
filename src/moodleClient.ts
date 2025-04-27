@@ -58,4 +58,24 @@ export class MoodleClient {
       throw error;
     }
   }
+
+  async createAnswerOnPost(postId: string, content: string): Promise<any> {
+    try {
+      console.log("Creating new answer on post with ID:", postId);
+      const response = await axios.post(
+        `${this.baseUrl}/webservice/rest/server.php`,
+        {
+          wstoken: this.token,
+          wsfunction: "mod_forum_add_discussion_post",
+          moodlewsrestformat: "json",
+          postid: postId,
+          content: content,
+        }
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error creating new answer on post:", error);
+      throw error;
+    }
+  }
 }

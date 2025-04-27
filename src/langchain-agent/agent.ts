@@ -1,58 +1,151 @@
+import type { ToolCall } from "@langchain/core/messages/tool";
 import {
   ChatPromptTemplate,
   HumanMessagePromptTemplate,
   SystemMessagePromptTemplate,
 } from "@langchain/core/prompts";
+import { DynamicStructuredTool } from "@langchain/core/tools";
 import { ChatOllama } from "@langchain/ollama";
+import {
+  CreateAnswerOnPost,
+  FetchCourseInformation,
+  SaveMemory,
+} from "./tools";
 
-import { createReactAgent } from "@langchain/langgraph/prebuilt";
-import { FetchCourseInformation, FetchForumPostsTool } from "./tools";
+class ProfessorAgent {
+  private llm: ChatOllama;
+  private tools: DynamicStructuredTool[];
+  private toolsForPosting: DynamicStructuredTool[];
+  private prompt: ChatPromptTemplate;
 
-console.log("aqui!");
-const llm = new ChatOllama({
-  model: "llama3-groq-tool-use", // or whichever model you’re serving
-  temperature: 0.7,
-  baseUrl: "http://localhost:11434", // default Ollama REST endpoint
-});
+  constructor() {
+    this.llm = new ChatOllama({
+      model: "llama3-groq-tool-use",
+      temperature: 0.3,
+      baseUrl: "http://localhost:11434",
+    });
 
-const tools = [FetchForumPostsTool, FetchCourseInformation];
+    this.tools = [FetchCourseInformation, SaveMemory];
+    this.toolsForPosting = [CreateAnswerOnPost];
 
-export const ProfessorAgentPrompt = ChatPromptTemplate.fromMessages([
-  SystemMessagePromptTemplate.fromTemplate(`
-You are ProfessorBot, the AI teaching assistant for a Moodle course. You will get data from moodle already summarized and classified by intent with useful information about the studentId and courseId.
-Follow these rules on every turn:  
-1. Only act on information in the provided context (MCP).  
-2. If you need more data from Moodle—assignments, forum posts, grades—invoke the appropriate tool (e.g., get_forum_posts, get_grade).  
-3. Respond in a supportive, clear, and respectful tone.  
-4. Never answer quiz or exam questions directly.  
-5. Log every interaction by calling the save_memory tool with a summary and metadata.  
-6. If you suggest any action (send_message, notify_human_professor, flag_for_review), return it in the 'suggestedAction' field.  
-`),
-  HumanMessagePromptTemplate.fromTemplate(`CONTEXT = {{mcp}}
-CLASSIFIED_USER_DATA = {{
-  "studentId": "{{classifiedData.studentId}}",
-  "courseId": "{{classifiedData.courseId}}",
-  "summarizedInput": "{{classifiedData.summarizedInput}}",
-  "forumId": "{{classifiedData.forumId}}",
-  "postId": "{{classifiedData.postId}}",
-  "intent": "{{classifiedData.intent}}",
-  "source": "{{classifiedData.source}}"
-}}
+    this.prompt = ChatPromptTemplate.fromMessages([
+      SystemMessagePromptTemplate.fromTemplate(`
+    You are ProfessorBot, the AI teaching assistant for a Moodle course.
+    
+    You always receive fully classified and complete user input data:
+    - userId
+    - courseId
+    - summarizedInput
+    - forumId
+    - postId
+    - intent
+    - source
+    
+    You can fully trust that all IDs and necessary information are present in the USER_DATA block.
+    
+    There are two kinds of tools you know:
+    - TOOLS: for retrieving additional information (example: get_course_information, get_forum_posts).
+    - POSTING_TOOLS: for creating new content. The tools for posting are: {toolsForPosting}.
+    
+    Rules you must always follow:
+    Important: Never leave a student's question unanswered in the forum. Always generate a reply.
 
-Respond with JSON:
-{{
-  "response": string,
-  "suggestedAction"?: {{ type: string; reason: string; urgency?: string; target?: string; additionalInfo?: Record<string, any> }},
-  "memorySummary": string
-}}
-`),
-  ["placeholder", "{agent_scratchpad}"],
-]);
 
-const agent = createReactAgent({
-  llm,
-  tools,
-  prompt: ProfessorAgentPrompt,
-});
+    1. If the source is a forum post or a message, you MUST create new content as a response, using a POSTING_TOOL.
+       - Even if you have to fetch course information first, you must then proceed to create a post replying to the original post.
+       - Do NOT skip this step.
+    2. Populate "functionToBeCalled" ONLY when you are creating new content (with a POSTING_TOOL). It must be on a JSON object.
+    3. If you are fetching information using a normal tool, leave "functionToBeCalled" as null during that fetch.
+    4. NEVER ask the user for more details. Assume everything needed is already provided.
+    5. Set the priority (0.0 to 1.0) based on the urgency of answering.
+    6. Set the confidence (0.0 to 1.0) based on your certainty about the answer.
+    7. ALWAYS respond strictly in this JSON format:
+    
+    {{
+      "functionToBeCalled": {{
+        "name": string | null,
+        "args": {{
+          [key: string]: any
+        }}
+      }},
+      "reason": string,
+      "priority": number,
+      "confidence": number,
+      "content": string,
+      "metadata": {{
+        "userId": string,
+        "courseId": string,
+        "forumId": string,
+        "postId": string,
+        "intent": string,
+        "source": string
+      }},
+      "memorySummary": string
+    }}
 
-export default agent;
+    IMPORTANT: All the fields must be filled, including the functionToBeCalled, even if it is null.
+    `),
+      HumanMessagePromptTemplate.fromTemplate("USER_DATA: {user_data}"),
+    ]);
+  }
+
+  public async invoke(classifiedData: {
+    userId: string;
+    courseId: string;
+    summarizedInput: string;
+    forumId: string;
+    postId: string;
+    intent: string;
+    source: string;
+  }) {
+    const toolsByName = {
+      fetchCourseInformation: FetchCourseInformation,
+      saveMemory: SaveMemory,
+    } as {
+      [key: string]: DynamicStructuredTool;
+    };
+
+    const inputVariables = {
+      userId: classifiedData.userId,
+      courseId: classifiedData.courseId,
+      summarizedInput: classifiedData.summarizedInput,
+      forumId: classifiedData.forumId,
+      postId: classifiedData.postId,
+      intent: classifiedData.intent,
+      source: classifiedData.source,
+    };
+
+    const messages = await this.prompt.formatMessages({
+      tools: this.tools,
+      user_data: JSON.stringify(inputVariables),
+      toolsForPosting: JSON.stringify(
+        this.toolsForPosting.map((tool) => ({
+          name: tool.name,
+          description: tool.description,
+          argsSchema: tool.schema || {},
+        }))
+      ),
+    });
+
+    const aiMessage = await this.llm.bindTools(this.tools).invoke(messages);
+
+    const toolCallsToExecute = (aiMessage.tool_calls as ToolCall[]).filter(
+      (toolCall) => toolsByName[toolCall.name]
+    );
+
+    for (const toolCall of toolCallsToExecute) {
+      console.log("Tool call: ", toolCall);
+      const selectedTool = toolsByName[toolCall.name];
+      const toolMessage = await selectedTool.invoke(toolCall);
+      console.log(`Calling the ${toolCall.name} tool.`);
+      messages.push(toolMessage);
+    }
+
+    const response = await this.llm.invoke(messages);
+    console.log("Response: ", response);
+
+    return response.content;
+  }
+}
+
+export default ProfessorAgent;
