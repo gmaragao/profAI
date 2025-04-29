@@ -16,22 +16,13 @@ export class IntentAgent {
 
   async classifyIntent(prompt: string): Promise<string> {
     try {
-      const response = await axios.post(
-        `${this.apiUrl}/generate`,
-        {
-          model: "llama3.2",
-          prompt: `${this.systemPrompt}\n\n${prompt}`,
-          stream: false,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${this.apiKey}`,
-          },
-        }
-      );
+      const response = await axios.post(`${this.apiUrl}/generate`, {
+        model: "llama3-groq-tool-use",
+        prompt: `${this.systemPrompt}\n\n${prompt}`,
+        stream: false,
+      });
 
       const data = response.data.response;
-
       return data;
     } catch (error) {
       console.error("Error processing prompt with Ollama:", error);
