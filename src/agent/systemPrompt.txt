@@ -22,9 +22,18 @@ Your tasks are:
    - Focus on *what* the student is asking or what the situation describes.
    - Do not include interpretations or advice — just restate the core issue.
 
-3. **Return a JSON object** with:
-   - `classifiedIntent`: one of the intent categories above
-   - `summary`: a short explanation of the message or trigger
+3. **Return a JSON object** as:
+   ```json
+   {
+      "userId": "string",
+      "courseId": "string",
+      "summarizedInput": "string",      
+      "forumId": "string",
+      "postId": "string",
+      "intent": "string",
+      "source": "forum_post | direct_message" 
+   }
+   ```
 
 
 ---
@@ -43,17 +52,5 @@ Input:
 }
 ```
 
-Output format:
-```json
-{
-    "userId": "string",
-    "courseId": "string",
-    "summarizedInput": "string",      
-    "forumId": "string",
-    "postId": "string",
-    "intent": "string",
-    "source": "forum_post | direct_message" 
-}
-```
 
 The input data that you must classify is:

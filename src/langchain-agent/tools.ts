@@ -21,7 +21,7 @@ export const CreateAnswerOnPost = tool(
   {
     name: "createAnswerOnPost",
     description:
-      "Call to create a new answer on a post. Provide the postId and content.",
+      "Call to create a new answer on a post. Always used to reply a post on the forum. Provide the postId and content.",
     schema: z.object({
       postId: z.string(),
       content: z.string(),
