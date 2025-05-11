@@ -1,0 +1,23 @@
+@startuml
+title Get extra data - Agent
+
+participant "Memory Repository" as MemoryRepository
+participant "Moodle Web Services" as MoodleAPIService
+participant "Agent" as MainAgent
+participant "Moodle Service" as MoodleAPI
+participant Orchestrator
+
+== 1. Agent Data Retrieval and Action Planning ==
+Orchestrator -> MainAgent : planActions(classifiedData[])
+note right: Data was already classified by the Intent Agent.
+loop 3 tool calls (maximum)
+    MainAgent -> MemoryRepository : getExtraData()
+    MemoryRepository --> MainAgent : extraData
+    MainAgent -> MoodleAPI : getExtraData()
+    MoodleAPI --> MainAgent : extraData
+end 
+note right 
+The agent will decide if the tool calls are needed.
+Each tool call (method call) is independent and according to agent need.
+end note
+MainAgent --> Orchestrator : suggestedActions[]

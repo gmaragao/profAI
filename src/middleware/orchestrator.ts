@@ -1,4 +1,4 @@
-import { MoodleClient } from "@/moodleClient";
+import { MoodleController } from "@/Moodle/moodleController";
 import MemoryRepository from "@/repository/memoryRepository";
 import { IntentClassifier } from "./intentClassifier";
 
@@ -28,7 +28,7 @@ export class Orchestrator {
   constructor(
     private intentClassifier: IntentClassifier,
     private memoryRepository: MemoryRepository,
-    private moodleClient: MoodleClient
+    private moodleClient: MoodleController
   ) {}
 
   runPendingActions = async (): Promise<void> => {

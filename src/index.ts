@@ -1,8 +1,8 @@
-import { IntentAgent } from "./agent/intentAgent";
-import ProfessorAgent from "./langchain-agent/agent";
+import { IntentAgent } from "@/IntentAgent/intentAgent";
 import { IntentClassifier } from "./middleware/intentClassifier";
 import { Orchestrator } from "./middleware/orchestrator";
-import { MoodleClient } from "./moodleClient";
+import { MoodleController } from "./Moodle/moodleController";
+import ProfessorAgent from "./ProfessorAgent/agent";
 import MemoryRepository from "./repository/memoryRepository";
 
 (async () => {
@@ -11,20 +11,20 @@ import MemoryRepository from "./repository/memoryRepository";
   const intentAgent = new IntentAgent();
   //await agent.getCourseInformation();
   const intentClassifier = new IntentClassifier(intentAgent);
-  const moodleClient = new MoodleClient();
+  const moodleController = new MoodleController();
 
   const memoryRepository = new MemoryRepository();
   const orchestrator = new Orchestrator(
     intentClassifier,
     memoryRepository,
-    moodleClient
+    moodleController
   );
 
   //const proactiveEngine = new ProactiveEngine(orchestrator);
 
   //proactiveEngine.run();
 
-  const forumPosts = await moodleClient.getForumPosts("4");
+  const forumPosts = await moodleController.getForumPosts("4");
 
   const classifiedPosts = await intentClassifier.classifyAndSummarizePosts(
     forumPosts

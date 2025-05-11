@@ -22,7 +22,7 @@ export class ProactiveEngine {
     console.log(
       "Starting cron job to fetch data from the Moodle server every day"
     );
-    /*     cron.schedule("0 0 * * *", async () => {
+    cron.schedule("0 0 * * *", async () => {
       console.log("Cron job started: Fetching data from the Moodle server");
       try {
         await this.orchestrator.fetchMoodleUpdates();
@@ -30,6 +30,7 @@ export class ProactiveEngine {
       } catch (error) {
         console.error("Error during cron job execution:", error);
       }
-    }); */
+    });
   }
 }
+

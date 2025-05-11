@@ -27,7 +27,7 @@ package "Backend" {
   component "Action Reporter" as ActionReporter <<component>>
 
   component "Intent Classifier Agent" as IntentAgent <<component>>
-  component "Professor Agent" as ProfessorAgent <<component>>
+  component "Agent" as ProfessorAgent <<component>>
   component "Proactive Engine" as ProactiveEngine <<component>>
 }
 

@@ -1,4 +1,4 @@
-import { EnrolledUser } from "@/models/moodleTypes";
+import { EnrolledUser } from "@/Models/moodleTypes";
 import axios from "axios";
 
 /* export const getAssignments = async (

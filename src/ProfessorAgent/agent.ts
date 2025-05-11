@@ -12,7 +12,7 @@ import {
   SaveMemory,
 } from "./tools";
 
-class ProfessorAgent {
+export class ProfessorAgent {
   private llm: ChatOllama;
   private tools: DynamicStructuredTool[];
   private toolsForPosting: DynamicStructuredTool[];
@@ -108,7 +108,6 @@ class ProfessorAgent {
       source: classifiedData.source,
     };
 
-    console.log("input variables:", inputVariables);
     const messages = await this.prompt.formatMessages({
       tools: this.tools,
       user_data: JSON.stringify(inputVariables),
@@ -136,8 +135,6 @@ class ProfessorAgent {
     }
 
     const response = await this.llm.invoke(messages);
-    console.log("Response: ", response);
-
     return response.content;
   }
 }

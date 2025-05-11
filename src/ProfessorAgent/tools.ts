@@ -1,23 +1,23 @@
-import { MoodleClient } from "@/moodleClient";
+import { MoodleController } from "@/Moodle/moodleController";
 import MemoryRepository from "@/repository/memoryRepository";
 import { tool } from "@langchain/core/tools";
 import { z } from "zod";
 
 // A tool for fetching assignments
-const moodleClient = new MoodleClient();
+const moodleController = new MoodleController();
 const memoryRepository = new MemoryRepository();
 
-/* export const FetchForumPostsTool = tool(moodleClient.getForumPosts, {
+export const FetchForumPostsTool = tool(moodleController.getForumPosts, {
   name: "get_forum_posts",
   description: "Call to retrieve posts for a given forumId",
   schema: z.object({
     discussionId: z.string(),
   }),
-}); */
+});
 
 export const CreateAnswerOnPost = tool(
   async ({ postId, content }: { postId: string; content: string }) =>
-    moodleClient.createAnswerOnPost(postId, content),
+    moodleController.createAnswerOnPost(postId, content),
   {
     name: "createAnswerOnPost",
     description:
@@ -60,7 +60,7 @@ export const FetchGradeTool = new Tool({
     return JSON.stringify(grade);
   },
 });
- */
+
 /* // A tool for writing memory (structured + vector)
 export const WriteMemoryTool = new Tool({
   name: "save_memory",

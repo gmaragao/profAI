@@ -1,0 +1,32 @@
+@startuml
+title Configure Agent
+actor "User (Professor)" as User
+
+participant "AgentConfigurator[Frontend]" as AgentConfigurator
+participant UIController
+participant Agent
+participant Orchestrator
+
+== 1. Configure Agent ==
+User -> AgentConfigurator : downloadSystemPrompt()
+AgentConfigurator -> UIController : getSystemPrompt()
+UIController --> AgentConfigurator : systemPromptFile
+AgentConfigurator --> User: systemPromptFile
+User -> AgentConfigurator : uploadSystemPrompt(systemPromptFileUpdated)
+AgentConfigurator -> UIController : updateSystemPrompt(systemPromptFileUpdated)
+UIController -> Orchestrator : updateSystemPrompt(systemPromptFileUpdated)
+note right: System prompt file is replaced.
+Orchestrator --> UIController : systemPromptUpdatedMessage
+UIController --> AgentConfigurator : systemPromptUpdatedMessage
+AgentConfigurator --> User : displayMessage(systemPromptUpdatedMessage)
+
+== 2. Configure Agent Credentials ==
+User -> AgentConfigurator : addAgentToken(token)
+AgentConfigurator -> UIController : addAgentToken(token)
+UIController -> Orchestrator : saveAgentToken(token)
+Orchestrator -> Repository: saveAgentToken()
+Repository --> Orchestrator : ok response
+Orchestrator --> UIController : agentTokenSavedMessage
+UIController --> AgentConfigurator : agentTokenSavedMessage
+AgentConfigurator --> User : displayMessage(agentTokenSavedMessage) 
+@enduml

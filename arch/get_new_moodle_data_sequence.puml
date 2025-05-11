@@ -1,0 +1,36 @@
+@startuml
+title Get new moodle data
+
+participant ProactiveEngine
+participant "Memory Repository" as MemoryRepository
+participant "Moodle Web Services" as MoodleAPIService
+participant "Agent" as MainAgent
+participant "Moodle Service" as MoodleAPI
+participant MessageDispatcher
+participant ActionReporter
+
+== 1. Trigger fetch posts ==
+ProactiveEngine -> Orchestrator : getNewForumData()
+Orchestrator --> ProactiveEngine : Ok response
+
+== 2. Get latest updates from moodle  ==
+Orchestrator -> MemoryRepository : getLatestForumData()
+MemoryRepository --> Orchestrator : latestForumData
+Orchestrator -> MoodleAPIService : getForumUpdates(id, date)
+MoodleAPIService -> MoodleAPI : GET /core_course_get_updates_since
+MoodleAPI --> MoodleAPIService : moodleUpdates[]
+MoodleAPIService --> Orchestrator : moodleUpdates[]
+
+Orchestrator -> MoodleAPIService : getForumPosts(forumIds)
+MoodleAPIService -> MoodleAPI : GET /mod_forum_get_forum_discussions
+MoodleAPI --> MoodleAPIService : forumUpdates[]
+MoodleAPIService --> Orchestrator : forumUpdates[]
+Orchestrator -> MoodleAPIService : getAssignmentsUpdates(assignmentIds)
+MoodleAPIService -> MoodleAPI : GET /mod_assign_get_assignments
+MoodleAPI --> MoodleAPIService : assignmentsUpdates[]
+MoodleAPIService --> Orchestrator : assignmentsUpdates[]
+Orchestrator -> MoodleAPIService : getQuizzesUpdates(quizzesIds)
+MoodleAPIService -> MoodleAPI : GET /mod_quiz_get_quizzes_by_courses
+MoodleAPI --> MoodleAPIService : quizzesUpdates[]
+MoodleAPIService --> Orchestrator : quizzesUpdates[]
+Orchestrator --> Orchestrator: forumUpdates[], assignmentsUpdates[], quizzesUpdates[]

@@ -1,0 +1,88 @@
+@startuml
+title Proactive Forum Fetch & Action Sequence
+
+participant ProactiveEngine
+participant Orchestrator
+participant MessageDispatcher
+participant "Memory Repository" as MemoryRepository
+participant "Moodle Web Services" as MoodleAPIService
+participant "Intent Classifier Agent" as IntentAgent
+participant "Agent" as MainAgent
+participant "Moodle Service" as MoodleAPI
+participant MessageDispatcher
+participant ReportsRepository
+participant ActionReporter
+
+== 1. Trigger fetch posts ==
+ProactiveEngine -> Orchestrator : getNewForumData()
+Orchestrator --> ProactiveEngine : Ok response
+
+== 2. Get latest updates from moodle and context from repository ==
+Orchestrator -> MemoryRepository : getLatestForumData()
+MemoryRepository --> Orchestrator : latestForumData
+Orchestrator -> MoodleAPIService : getForumUpdates(id, date)
+MoodleAPIService -> MoodleAPI : GET /core_course_get_updates_since
+MoodleAPI --> MoodleAPIService : moodleUpdates[]
+MoodleAPIService --> Orchestrator : moodleUpdates[]
+
+Orchestrator -> Orchestrator: getUpdatesPerType(forumUpdates[])
+Orchestrator -> MoodleAPIService : getForumPosts(forumIds)
+MoodleAPIService -> MoodleAPI : GET /mod_forum_get_forum_discussions
+MoodleAPI --> MoodleAPIService : forumUpdates[]
+MoodleAPIService --> Orchestrator : forumUpdates[]
+Orchestrator -> MoodleAPIService : getAssignmentsUpdates(assignmentIds)
+MoodleAPIService -> MoodleAPI : GET /mod_assign_get_assignments
+MoodleAPI --> MoodleAPIService : assignmentsUpdates[]
+MoodleAPIService --> Orchestrator : assignmentsUpdates[]
+Orchestrator -> MoodleAPIService : getQuizzesUpdates(quizzesIds)
+MoodleAPIService -> MoodleAPI : GET /mod_quiz_get_quizzes_by_courses
+MoodleAPI --> MoodleAPIService : quizzesUpdates[]
+MoodleAPIService --> Orchestrator : quizzesUpdates[]
+Orchestrator --> Orchestrator: forumUpdates[], assignmentsUpdates[], quizzesUpdates[]
+
+
+
+== 3. Classify Posts and Save ==
+Orchestrator -> IntentAgent : classifyUpdates(forumUpdates[], assignmentsUpdates[], quizzesUpdates[])
+note right: Intent Agent takes only the updates from moodle and classifies them, independent of the previous context 
+IntentAgent --> Orchestrator : classifiedUpdates[]
+Orchestrator -> MemoryRepository : saveClassifiedUpdates(classifiedUpdates[])
+MemoryRepository --> Orchestrator : ok response
+
+
+== 4. Plan action ==
+Orchestrator -> Agent : planActions(classifiedUpdates[])
+MainAgent -> MoodleController : getExtraForumData() (optional -- agent will decide if this is needed)
+MoodleAPIService -> MoodleAPI : GET /mod_forum_get_forum_discussions or other endpoints
+MoodleAPI --> MoodleAPIService : extraData
+MoodleAPIService --> MainAgent : extraData
+
+
+== 5. Execute Actions == 
+MainAgent -> MemoryRepository : getForumContext(id)
+note right: Agent may or may not need to get the context from the repository, depending on its decision (LLM).
+MemoryRepository --> MainAgent : latestForumContext
+MainAgent -> MemoryRepository : getSubjectContext(id)
+MemoryRepository --> MainAgent : subjectContext
+
+MainAgent --> Orchestrator : suggestedActions[] 
+note right
+Suggested actions include confidence, priority level and possibly a due date.
+These attributes will be used to filter and sort the actions in order to make the system know if it should act or not and when.
+end note 
+Orchestrator -> MessageDispatcher : filterActions(suggestedActions)
+MessageDispatcher --> Orchestrator : actionsFilteredAndSortedByPriority[]
+Orchestrator -> ActionReporter : reportActions(actionsFilteredAndSortedByPriority[])
+ActionReporter -> ReportsRepository : saveActions(actionsFilteredAndSortedByPriority[])
+ReportsRepository --> ActionReporter : ok response
+ActionReporter --> Orchestrator : ok response
+Orchestrator -> Orchestrator : executeActions(filteredActions[]) 
+note right: Actions execution is detailed in a different diagram.
+ActionReporter -> ReportsRepository : saveActions(actionsFilteredAndSortedByPriority[])
+ReportsRepository --> ActionReporter : ok response
+ActionReporter --> Orchestrator : ok response
+
+
+Orchestrator -> ActionReporter : updateActionsAccordingToResponse()
+ActionReporter --> Orchestrator : ok response
+@enduml

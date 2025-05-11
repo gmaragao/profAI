@@ -1,5 +1,5 @@
-import { IntentAgent } from "@/agent/intentAgent";
-import { ForumPostsResponse } from "@/models/moodleTypes";
+import { IntentAgent } from "@/IntentAgent/intentAgent";
+import { ForumPostsResponse } from "@/Models/moodleTypes";
 
 export class IntentClassifier {
   constructor(private intentAgent: IntentAgent) {}
@@ -23,8 +23,9 @@ export class IntentClassifier {
 
       const prompt = JSON.stringify(formattedPost);
 
-      console.log("Prompt to Ollama: ", post.message);
-      const agentResponse = await this.intentAgent.processPrompt(prompt);
+      const agentResponse = await this.intentAgent.classifyIntent(prompt);
+
+      console.log("Agent response: ", agentResponse);
       results.push(agentResponse);
     }
 

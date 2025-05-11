@@ -1,8 +1,8 @@
 import axios from "axios";
-import { config } from "./config";
-import { EnrolledUser, ForumPostsResponse } from "./models/moodleTypes";
+import { config } from "../config";
+import { EnrolledUser, ForumPostsResponse } from "../Models/moodleTypes";
 
-export class MoodleClient {
+export class MoodleController {
   private baseUrl = config.moodle.baseUrl;
   private token = config.moodle.token;
 

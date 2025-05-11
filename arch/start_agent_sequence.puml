@@ -1,0 +1,54 @@
+@startuml
+title Start/Stop Agent and Course Evaluation
+actor "User (Professor)" as User
+
+participant "AgentConfigurator[Frontend]" as AgentConfigurator
+participant UIController
+participant Agent
+participant Orchestrator
+participant "Moodle Web Services" as MoodleAPIService
+participant "Moodle Service" as MoodleService
+participant Agent
+
+== 1. Start Agent ==
+User -> AgentConfigurator : startAgent()
+AgentConfigurator -> UIController : startAgent()
+UIController -> Orchestrator : startAgent()
+Orchestrator --> UIController : agentStartedMessage
+UIController --> AgentConfigurator : agentStartedMessage
+AgentConfigurator --> User : displayMessage(agentStartedMessage)
+
+== 2. Stop Agent ==
+User -> AgentConfigurator : stopAgent()
+UIController -> Orchestrator : stopAgent()
+AgentConfigurator -> UIController : stopAgent()
+Orchestrator --> UIController : agentStoppedMessage
+UIController --> AgentConfigurator : agentStoppedMessage
+AgentConfigurator --> User : displayMessage(agentStoppedMessage)
+== 3. Force Agent to Evaluate Course Moment ==
+User -> AgentConfigurator : forceEvaluateCourseMoment()
+AgentConfigurator -> UIController : forceEvaluateCourseMoment()
+UIController -> Orchestrator : forceEvaluateCourseMoment()
+Orchestrator --> UIController: evaluationStartedMessage
+Orchestrator -> Orchestrator : getRelevantCourseData()
+UIController -> AgentConfigurator: evaluationStartedMessage
+AgentConfigurator --> User : displayMessage(evaluationStartedMessage)
+Orchestrator -> MoodleService : getRelevantCourseData()
+MoodleService -> MoodleAPIService : GET data
+note right
+Multiple API calls will be done to get the data needed from 
+forum posts, direct messages, assignments, quizzes and grades.
+end note
+MoodleAPIService --> MoodleService : courseData
+MoodleService --> Orchestrator : courseData
+Orchestrator -> IntentAgent : classifyCourseData(courseData)
+IntentAgent --> Orchestrator : classifiedData[]
+Orchestrator -> MemoryRepository : saveClassifiedData(classifiedUpdates[])
+MemoryRepository --> Orchestrator : ok response
+Orchestrator -> Agent : planActions(classifiedData[])
+Agent --> Orchestrator : suggestedActions[]
+note right
+Agent extra data retrieval and action execution are detailed in other digrams
+end note
+
+@enduml

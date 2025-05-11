@@ -10,19 +10,20 @@ export class IntentAgent {
 
   // Read the system prompt from file
   private systemPrompt = fs.readFileSync(
-    "./src/agent/systemPrompt.txt",
+    "./src/IntentAgent/intentAgentPrompt.txt",
     "utf-8"
   );
 
-  async classifyIntent(prompt: string): Promise<string> {
+  async classifyIntent(prompt: string): Promise<any> {
     try {
       const response = await axios.post(`${this.apiUrl}/generate`, {
-        model: "llama3-groq-tool-use",
+        model: "llama3.2",
         prompt: `${this.systemPrompt}\n\n${prompt}`,
         stream: false,
       });
 
       const data = response.data.response;
+
       return data;
     } catch (error) {
       console.error("Error processing prompt with Ollama:", error);

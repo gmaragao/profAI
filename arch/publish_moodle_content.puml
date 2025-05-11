@@ -1,0 +1,43 @@
+@startuml
+title Publish Moodle Content Sequence (Forum Posts, Assignments, Quizzes, Direct Messages)
+
+participant Orchestrator
+participant MessageDispatcher
+participant "Memory Repository" as MemoryRepository
+participant "Moodle Service" as MoodleService
+participant "Moodle Web Services" as MoodleAPIService
+participant "Intent Agent" as IntentAgent
+participant "Agent" as MainAgent
+
+
+
+== Execute Actions == 
+Orchestrator -> MessageDispatcher : filterActions(suggestedActions) 
+note right
+Actions came from the agent (current actions) or 
+from the repository (pending actions)
+end note
+MessageDispatcher --> Orchestrator : actionsFilteredAndSortedByPriority[]
+Orchestrator -> Orchestrator : executeActions(actionsFilteredAndSortedByPriority[])
+Orchestrator -> ActionReporter : reportActions(actionsFilteredAndSortedByPriority[])
+ActionReporter -> ReportsRepository : saveActions(actionsFilteredAndSortedByPriority[])
+ReportsRepository --> ActionReporter : ok response
+ActionReporter --> Orchestrator : ok response
+Orchestrator -> MoodleService: createNewForumPost(forumId, subject, message)
+note right
+Multiple calls will happen to Moodle Service according to the number of actions 
+(publish new forum posts, assignments, quizzes, etc.).
+end note
+MoodleService -> MoodleAPIService : POST /mod_forum_add_discussion
+note right
+Example of a POST request to create a new post on the forum.
+end note
+MoodleAPIService --> MoodleService : moodleResponse
+MoodleService --> Orchestrator : moodleResponse
+Orchestrator --> Orchestrator : moodleResponses[]
+Orchestrator -> MemoryRepository : updateActionsMetadata(actionsFilteredAndSortedByPriority[], moodleResponses[])
+MemoryRepository --> Orchestrator : ok response
+Orchestrator -> ActionReporter : updateActionsAccordingToResponse()
+
+ActionReporter --> Orchestrator : ok response
+@enduml

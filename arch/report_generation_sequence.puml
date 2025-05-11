@@ -1,0 +1,28 @@
+@startuml
+title Report Generation Sequence
+actor "User (Professor)" as User
+
+participant "ReportViewer[Frontend]" as ReportViewer
+participant UIController
+participant Agent
+participant Orchestrator
+
+== 1. Configure Agent ==
+User -> ReportViewer: generateActionsReport(courseId, dateRange)
+ReportViewer -> UIController: generateActionsReport(courseId, dateRange)
+UIController -> Orchestrator: generateActionsReport(courseId, dateRange)
+Orchestrator -> ReportsRepository: getActionsTaken(courseId, dateRange)
+ReportsRepository --> Orchestrator: actionsTaken
+Orchestrator -> Orchestrator: generateReport(actionsTaken)
+note right
+The report is just a summary of the actions taken by the agent. (JSON structure)
+It's not a document. 
+The summary will be displayed in the UI in the proper way for a good user experience.
+end note
+Orchestrator --> Orchestrator: report
+Orchestrator --> UIController: report
+UIController --> ReportViewer: report
+ReportViewer --> User: displayReport(report)
+
+
+@enduml
