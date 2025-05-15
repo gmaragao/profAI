@@ -39,4 +39,4 @@ tmp/
 temp/
 
 src/generated/prisma/
-
+generated/prisma/
