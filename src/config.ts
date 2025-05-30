@@ -6,8 +6,7 @@ export const config = {
     apiKey: "your-ollama-api-key", // Replace with your Ollama API key
   },
   moodle: {
-    baseUrl:
-      "http://localhost:8080/webservice/rest/server.php?wstoken=1c37bcdd46b40749639659fb7184ef67", // Replace with your Moodle base URL
+    baseUrl: "http://localhost:8080/webservice/rest/server.php", // Replace with your Moodle base URL
     token: "1c37bcdd46b40749639659fb7184ef67", // Replace with your Moodle token
   },
 };

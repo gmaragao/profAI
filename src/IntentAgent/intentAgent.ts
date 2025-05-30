@@ -1,4 +1,5 @@
 import { config } from "@/config";
+import { ClassifiedResponse } from "@/middleware/types";
 import axios from "axios";
 import * as fs from "fs";
 
@@ -14,17 +15,22 @@ export class IntentAgent {
     "utf-8"
   );
 
-  async classifyIntent(prompt: string): Promise<any> {
+  async classifyIntent(prompt: string): Promise<ClassifiedResponse> {
     try {
       const response = await axios.post(`${this.apiUrl}/generate`, {
-        model: "llama3.2",
+        model: "gemma3:4b",
         prompt: `${this.systemPrompt}\n\n${prompt}`,
         stream: false,
       });
 
       const data = response.data.response;
+      // Remove triple backticks and optional "json" label
+      const cleaned = data
+        .trim()
+        .replace(/^```json\s*/i, "") // Remove starting ```json (case-insensitive)
+        .replace(/```$/, ""); // Remove ending ```
 
-      return data;
+      return JSON.parse(cleaned);
     } catch (error) {
       console.error("Error processing prompt with Ollama:", error);
       throw error;

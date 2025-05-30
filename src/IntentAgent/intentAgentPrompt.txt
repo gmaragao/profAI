@@ -16,6 +16,10 @@ Your tasks are:
    - "missed_deadline"
    - "general_question"
    - "subject_knowledge_question"
+   - "general_information"
+   - "professor_response"
+   - "clarification_by_student"
+   - "clarification_by_professor"
    - "unknown"
 
 2. **Summarize the content** of the input in a clear, concise sentence.
@@ -23,26 +27,24 @@ Your tasks are:
    - Do not include interpretations or advice — just restate the core issue.
 
 3. **Return a JSON object** as:
-   ```json
    {
-      "userId": "string",
-      "courseId": "string",
-      "summarizedInput": "string",      
-      "forumId": "string",
-      "postId": "string",
-      "intent": "string",
-      "source": "forum_post | direct_message" 
+   "userId": "string",
+   "courseId": "string",
+   "summarizedInput": "string",      
+   "forumId": "string",
+   "postId": "string",
+   "intent": "string",
+   "source": "forum_post | direct_message" 
    }
-   ```
+   - IMPORTANT! This Json object must be formatted in a way to be parsed later. Do not add ticks as ` nor the format of the response. Only the JSON data should be returned.
 
 
 ---
 
 Input:
-```json
 {
    userId: "string",
-   courseName: "string,
+   courseName: "string",
    inputText: "string,
    forumId: "string,
    postId: "string,
@@ -50,7 +52,6 @@ Input:
    subject: "string,
    message: "string,
 }
-```
 
 
 The input data that you must classify is:

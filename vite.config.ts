@@ -1,4 +1,5 @@
 import { defineConfig } from "vite";
+import { defineConfig as defineVitestConfig } from "vitest/config";
 
 export default defineConfig({
   build: {
@@ -12,4 +13,16 @@ export default defineConfig({
       external: [],
     },
   },
+
+  test: {
+    environment: "jsdom",
+  },
 });
+
+const vitestConfig = defineVitestConfig({
+  test: {
+    environment: "jsdom",
+  },
+});
+
+export { vitestConfig };

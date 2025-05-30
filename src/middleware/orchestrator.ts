@@ -1,4 +1,5 @@
-import { MoodleController } from "@/Moodle/moodleController";
+import { getPrismaClient } from "@/database/prismaService";
+import { MoodleClient } from "@/Moodle/moodleController";
 import MemoryRepository from "@/repository/memoryRepository";
 import { IntentClassifier } from "./intentClassifier";
 
@@ -28,62 +29,58 @@ export class Orchestrator {
   constructor(
     private intentClassifier: IntentClassifier,
     private memoryRepository: MemoryRepository,
-    private moodleClient: MoodleController
+    private moodleClient: MoodleClient,
+    private prisma = getPrismaClient()
   ) {}
 
-  runPendingActions = async (): Promise<void> => {
-    const pendingActions = await this.memoryRepository.getPendingActions();
-
-    pendingActions.forEach(async (action) => {
-      this.isActionDue(action)
-        ? await this.executeAction(action)
-        : console.log(
-            `Action ${action.id} is not due yet. Waiting for the next check.`
-          );
+  getPrisma = async () => {
+    console.log("DATABASE_URL:", process.env.DATABASE_URL);
+    // find all classified intents in the database
+    const newIntent = await this.prisma.classifiedIntent.create({
+      data: {
+        userId: "123",
+        courseId: "456",
+        summarizedInput: "This is a test input",
+        forumId: "789",
+        postId: "101112",
+        intent: "test_intent",
+        source: "forum",
+      },
     });
+
+    console.log("Inserted record:", newIntent);
+    console.log("Fetching classified intents from the database...");
+    const classifiedIntents = await this.prisma.classifiedIntent.findMany();
+    console.log("Classified intents fetched: ", classifiedIntents);
   };
+  async getForumData() {
+    const courseId = "3"; // Replace with the actual course ID
+    const discussions = await this.moodleClient.getForumPosts(courseId);
 
-  private isActionDue = (action: any): boolean => {
-    const currentTime = new Date();
-    const actionTime = new Date(action.dueDate);
-    const timeDiff = currentTime.getTime() - actionTime.getTime();
+    const classifiedPosts =
+      await this.intentClassifier.classifyAndSummarizePosts(discussions);
 
-    // Check if the action is due based on the specified interval
-    return timeDiff >= action.interval * 60 * 1000;
-  };
-
-  // TODO -> Add an activity diagram to explain this part
-  // TODO -> Add this logic into the MessageDispatcher
-  private executeAction(action: any) {
-    if (action.type === "create_forum_post") {
-      console.log(`Executing action: ${action.id}`);
-
-      // Logic to create a forum post
-      // Perform the action (e.g., send a notification)
-      // After executing, update the action status in the repository
-      this.memoryRepository.update("actions", action.id, {
-        status: "completed",
-      });
-    } else if (action.type === "create_new_answer_on_post") {
-      console.log(`Executing action: ${action.id}`);
-
-      // Logic to create a new forum post
-      this.moodleClient.createAnswerOnPost(action.postId, action.content);
-
-      // Perform the action (e.g., send a notification)
-      // After executing, update the action status in the repository
-      this.memoryRepository.update("actions", action.id, {
-        status: "completed",
-      });
-    } else if (action.type === "send_direct_message") {
-      console.log(`Executing action: ${action.id}`);
-
-      // Logic to send a direct message
-      // Perform the action (e.g., send a notification)
-      // After executing, update the action status in the repository
-      this.memoryRepository.update("actions", action.id, {
-        status: "completed",
+    for (const post of classifiedPosts) {
+      await this.prisma.classifiedIntent.create({
+        data: {
+          userId: post.userId,
+          courseId: post.courseId,
+          summarizedInput: post.summarizedInput,
+          forumId: post.forumId,
+          postId: post.postId,
+          intent: post.intent,
+          source: post.source,
+        },
       });
     }
+  }
+
+  async getLatestKnownForumData() {
+    const date = new Date(
+      new Date().getTime() - 24 * 60 * 60 * 1000 // 24 hours ago
+    ).toISOString();
+    const newUpdates = await this.moodleClient.getUpdatesSince(date);
+
+    console.log(newUpdates);
   }
 }

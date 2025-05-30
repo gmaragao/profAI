@@ -1,14 +1,14 @@
 import { IntentAgent } from "@/IntentAgent/intentAgent";
 import { ForumPostsResponse } from "@/Models/moodleTypes";
+import { ClassifiedResponse } from "./types";
 
 export class IntentClassifier {
   constructor(private intentAgent: IntentAgent) {}
 
   async classifyAndSummarizePosts(
     response: ForumPostsResponse
-  ): Promise<any[]> {
+  ): Promise<ClassifiedResponse[]> {
     const results = [];
-
     for (const post of response.posts) {
       const formattedPost = {
         userId: post.author.id,
@@ -25,7 +25,6 @@ export class IntentClassifier {
 
       const agentResponse = await this.intentAgent.classifyIntent(prompt);
 
-      console.log("Agent response: ", agentResponse);
       results.push(agentResponse);
     }
 

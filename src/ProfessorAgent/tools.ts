@@ -1,10 +1,10 @@
-import { MoodleController } from "@/Moodle/moodleController";
+import { MoodleClient } from "@/Moodle/moodleController";
 import MemoryRepository from "@/repository/memoryRepository";
 import { tool } from "@langchain/core/tools";
 import { z } from "zod";
 
 // A tool for fetching assignments
-const moodleController = new MoodleController();
+const moodleController = new MoodleClient();
 const memoryRepository = new MemoryRepository();
 
 export const FetchForumPostsTool = tool(moodleController.getForumPosts, {

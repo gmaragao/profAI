@@ -11,5 +11,4 @@
 
 -> MessageDispatcher vai ser assincrono para não sobrecarregar o sistema (filteredActions contém ações que vão ser tomadas no momento e ações que deverão ficar para depois de acordo com grau de importância para não sobrecarregar o sistema)
 
-
-# Intent agent classifier ainda não está funcionando corretamente
+--> O use case de buscar novas informações está funcionando apenas para "discussions", é necessário adicionar os outros tipos
