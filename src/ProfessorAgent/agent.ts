@@ -1,4 +1,5 @@
 import type { ToolCall } from "@langchain/core/messages/tool";
+
 import {
   ChatPromptTemplate,
   HumanMessagePromptTemplate,
@@ -6,16 +7,21 @@ import {
 } from "@langchain/core/prompts";
 import { DynamicStructuredTool } from "@langchain/core/tools";
 import { ChatOllama } from "@langchain/ollama";
+import path from "path";
+import { fileURLToPath } from "url";
 import {
-  CreateAnswerOnPost,
-  FetchCourseInformation,
+  // FetchCourseInformation,
+  GetRelevantKnowledge,
+  GetSubjectMetadata,
+  GetWeeklySummary,
   SaveMemory,
 } from "./tools";
+
+import fs from "fs";
 
 export class ProfessorAgent {
   private llm: ChatOllama;
   private tools: DynamicStructuredTool[];
-  private toolsForPosting: DynamicStructuredTool[];
   private prompt: ChatPromptTemplate;
 
   constructor() {
@@ -25,13 +31,12 @@ export class ProfessorAgent {
       baseUrl: "http://localhost:11434",
     });
 
-    this.tools = [FetchCourseInformation, SaveMemory];
-    this.toolsForPosting = [CreateAnswerOnPost];
+    this.tools = [GetRelevantKnowledge, GetSubjectMetadata, GetWeeklySummary];
 
     this.prompt = ChatPromptTemplate.fromMessages([
       SystemMessagePromptTemplate.fromTemplate(`
     You are ProfessorBot, the AI teaching assistant for a Moodle course.
-    
+
     You always receive fully classified and complete user input data:
     - userId
     - courseId
@@ -43,16 +48,13 @@ export class ProfessorAgent {
     
     You can fully trust that all IDs and necessary information are present in the USER_DATA block.
     
-    - TOOLS: for retrieving additional information.
-
     1. If you are fetching information using a normal tool, leave "actionToBeTaken" field as null during that fetch.
     2. NEVER ask the user for more details. Assume everything needed is already provided.
     3. Set the priority (0.0 to 1.0) based on the urgency of answering.
     4. Set the confidence (0.0 to 1.0) based on your certainty about the answer.
     5. The actionToBeTaken field must be filled with one of these options:
     Available action types:
-    - "create_forum_post": Create a new post in a forum
-    - "reply_to_forum_post": Reply to an existing forum post
+    - "create_forum_post": Create a new post in a forum. This is also used to reply a post.
     - "send_direct_message": Send a private message to a student
     - "create_announcement": Create a course-wide announcement
     - "grade_feedback": Provide feedback on student submission
@@ -61,10 +63,10 @@ export class ProfessorAgent {
     5. ALWAYS respond strictly in this JSON format defined as:
     {{
       "actionToBeTaken": string
-      "reason": string,
+      "reason": string,  -- This field must contain the content in portuguese!
       "priority": number,
       "confidence": number,
-      "content": string,
+      "content": string, -- This field must contain the content in portuguese!
       "metadata": {{
         "userId": string,
         "courseId": string,
@@ -73,10 +75,12 @@ export class ProfessorAgent {
         "intent": string,
         "source": string
       }},
-      "memorySummary": string
+      "memorySummary": string --  This field must contain the content in portuguese!
     }}
-
-    IMPORTANT: The content field should be translated to portuguese.
+    6. Use the tools provided to fetch information or perform actions. The tools can provide you knowledge about the subject, actions to get moodle data, rules of the course and also historical data of the course. You should always try to get the answer from the tools first, and only if you cannot find the answer, you should use your own knowledge.
+    
+    You also should follow these extra instructions:
+      {{extra_instructions}}
     `),
       HumanMessagePromptTemplate.fromTemplate("USER_DATA: {user_data}"),
     ]);
@@ -91,9 +95,22 @@ export class ProfessorAgent {
     intent: string;
     source: string;
   }) {
+    // Read extra configuration from a txt file for instructions
+    const __filePath = fileURLToPath(import.meta.url);
+    // Read file from the same directory as this file
+    const extraInstructionsPath = path.join(
+      path.dirname(__filePath),
+      "extraInstructions.txt"
+    );
+    const extraInstructionsContent = fs
+      .readFileSync(extraInstructionsPath, "utf-8")
+      .replace(/\n/g, " ");
+
     const toolsByName = {
-      fetchCourseInformation: FetchCourseInformation,
+      //fetchCourseInformation: FetchCourseInformation,
       saveMemory: SaveMemory,
+      getRelevantKnowledgeFromMaterial: GetRelevantKnowledge,
+      getSubjectMetadata: GetSubjectMetadata,
     } as {
       [key: string]: DynamicStructuredTool;
     };
@@ -110,14 +127,8 @@ export class ProfessorAgent {
 
     const messages = await this.prompt.formatMessages({
       tools: this.tools,
+      extra_instructions: JSON.stringify(extraInstructionsContent),
       user_data: JSON.stringify(inputVariables),
-      toolsForPosting: JSON.stringify(
-        this.toolsForPosting.map((tool) => ({
-          name: tool.name,
-          description: tool.description,
-          argsSchema: tool.schema || {},
-        }))
-      ),
     });
 
     const aiMessage = await this.llm.bindTools(this.tools).invoke(messages);
