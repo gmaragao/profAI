@@ -30,11 +30,13 @@ Your tasks are:
    {
    "userId": "string",
    "courseId": "string",
-   "summarizedInput": "string",      
+   "summarizedInput": "string", -- this summarized input must be in portuguese!!
    "forumId": "string",
    "postId": "string",
    "intent": "string",
-   "source": "forum_post | direct_message" 
+   "source": "forum_post | direct_message",
+   "createdAt": "string",
+   "updatedAt": string,
    }
    - IMPORTANT! This Json object must be formatted in a way to be parsed later. Do not add ticks as ` nor the format of the response. Only the JSON data should be returned.
 

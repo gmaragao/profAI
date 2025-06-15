@@ -1,9 +1,8 @@
 import { config } from "@/config";
-import { ClassifiedIntentFromAgent } from "@/Middleware/types";
 import axios from "axios";
 import * as fs from "fs";
 
-export class IntentAgent {
+export class MemoryAgent {
   private apiUrl = config.ollama.useLocal
     ? config.ollama.localUrl
     : config.ollama.apiUrl;
@@ -11,19 +10,23 @@ export class IntentAgent {
 
   // Read the system prompt from file
   private systemPrompt = fs.readFileSync(
-    "./src/IntentAgent/intentAgentPrompt.txt",
+    "./src/Memory/memoryAgentSystemPrompt.txt",
     "utf-8"
   );
 
-  // TODO -> Adapt to have the same structure as ProfessorAgent
-  async classifyIntent(prompt: string): Promise<ClassifiedIntentFromAgent> {
+  async summarize(prompt: string): Promise<WeeklySummary> {
     try {
+      console.log("Summarizing week...");
       const response = await axios.post(`${this.apiUrl}/generate`, {
         model: "gemma3:4b",
         prompt: `${this.systemPrompt}\n\n${prompt}`,
         stream: false,
       });
 
+      console.log(
+        "Response received from Ollama while summarizing week:",
+        response.data
+      );
       const data = response.data.response;
       const cleaned = data
         .trim()

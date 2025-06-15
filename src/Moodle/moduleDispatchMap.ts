@@ -1,14 +1,4 @@
-// src/moodle/moduleDispatchMap.ts
-
-export type MoodleModuleType =
-  | "discussions"
-  | "assign"
-  | "resource"
-  | "quiz"
-  | "page"
-  | "url"
-  | "book"
-  | "lesson";
+export type MoodleModuleType = "discussions" | "assign" | "resource" | "quiz";
 
 interface ModuleHandler {
   description: string;
@@ -16,6 +6,22 @@ interface ModuleHandler {
   paramBuilder: (instanceId: number, update: any) => Record<string, any>;
 }
 
+/**
+ * Maps Moodle module types to their respective handlers.
+ * Each handler provides a description, the API function to call for details,
+ * and a parameter builder function that constructs the parameters
+ * for the API call based on arguments provided.
+ * This allows for dynamic handling of different module types
+ * and their specific requirements.
+ * IMPORTANT: Currently only 'discussions' is being used.
+
+ * @example
+ * const handler = moodleModuleDispatchMap['discussions'];
+ * const params = handler.paramBuilder(postId, update);
+ * handler.detailApi; // 'mod_forum_get_discussion_post'
+ * params; // { postid: postId }
+ * @returns {Record<MoodleModuleType, ModuleHandler>} A mapping of module types to their handlers.
+ */
 export const moodleModuleDispatchMap: Record<MoodleModuleType, ModuleHandler> =
   {
     discussions: {
@@ -35,11 +41,6 @@ export const moodleModuleDispatchMap: Record<MoodleModuleType, ModuleHandler> =
     resource: {
       description: "Static file resources",
       detailApi: "core_course_get_contents",
-      paramBuilder: (_, __) => ({}), // course ID might be used instead
-    },
-    page: {
-      description: "Moodle Page content",
-      detailApi: "core_course_get_contents",
       paramBuilder: (_, __) => ({}),
     },
     quiz: {
@@ -47,23 +48,6 @@ export const moodleModuleDispatchMap: Record<MoodleModuleType, ModuleHandler> =
       detailApi: "mod_quiz_get_user_attempts",
       paramBuilder: (quizId, update) => ({
         quizid: quizId,
-      }),
-    },
-    url: {
-      description: "External links",
-      detailApi: "core_course_get_contents",
-      paramBuilder: (_, __) => ({}),
-    },
-    book: {
-      description: "Multi-page book resource",
-      detailApi: "mod_book_get_books_by_courses",
-      paramBuilder: (_, __) => ({}),
-    },
-    lesson: {
-      description: "Interactive lessons",
-      detailApi: "mod_lesson_get_lesson",
-      paramBuilder: (lessonId, __) => ({
-        lessonid: lessonId,
       }),
     },
   };

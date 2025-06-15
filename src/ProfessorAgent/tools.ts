@@ -1,11 +1,12 @@
+import { MemoryService } from "@/Memory/memoryService";
 import { MoodleClient } from "@/Moodle/moodleController";
-import MemoryRepository from "@/repository/memoryRepository";
+import { CustomVectorStore } from "@/RAG/vectorStore";
 import { tool } from "@langchain/core/tools";
 import { z } from "zod";
 
-// A tool for fetching assignments
 const moodleController = new MoodleClient();
-const memoryRepository = new MemoryRepository();
+const memoryService = new MemoryService();
+const vectorStore = new CustomVectorStore();
 
 export const FetchForumPostsTool = tool(moodleController.getForumPosts, {
   name: "get_forum_posts",
@@ -15,62 +16,46 @@ export const FetchForumPostsTool = tool(moodleController.getForumPosts, {
   }),
 });
 
-export const CreateAnswerOnPost = tool(
-  async ({ postId, content }: { postId: string; content: string }) =>
-    moodleController.createAnswerOnPost(postId, content),
+export const GetRelevantKnowledge = tool(
+  async ({ query }: { query: string }) => {
+    console.log("Recuperando conhecimento relevante para a consulta: ", query);
+    return await vectorStore.searchSubjectKnowledge(query);
+  },
   {
-    name: "createAnswerOnPost",
+    name: "getRelevantKnowledgeFromMaterial",
     description:
-      "Call to create a new answer on a post. Always used to reply a post on the forum. Provide the postId and content.",
+      "Chamada para recuperar informações relevantes de um livro contendo conteúdo específico da disciplina para responder perguntas, resumir tópicos ou apoiar pesquisas e aprendizado. Este é um conteúdo relacionado à disciplina. Esta ferramenta realizará uma busca vetorial, use o parâmetro de consulta para buscar informações específicas.",
     schema: z.object({
-      postId: z.string(),
-      content: z.string(),
+      query: z.string(),
     }),
   }
 );
 
-export const FetchCourseInformation = tool(
-  memoryRepository.getCourseInformation,
+export const GetSubjectMetadata = tool(
+  async ({ query }: { query: string }) => {
+    console.log("Recuperando conhecimento relevante para a consulta: ", query);
+    return await vectorStore.searchSubjectMetadata(query);
+  },
   {
-    name: "fetchCourseInformation",
+    name: "getSubjectMetadata",
     description:
-      "Call to retrieve course information. Including course structure, assignments, grades and dates.",
+      "Chamada para recuperar informações do curso. Incluindo estrutura do curso, tarefas, datas e materiais relacionados. Isso está relacionado ao próprio curso e seus metadados. Para detalhes sobre o curso e datas, use esta ferramenta. Esta ferramenta realizará uma busca vetorial, use o parâmetro de consulta para buscar informações específicas.",
     schema: z.object({
-      courseId: z.string(),
+      query: z.string(),
     }),
   }
 );
 
-export const SaveMemory = tool(memoryRepository.saveMemory, {
-  name: "saveMemory",
-  description:
-    "Call to save a short summary and metadata to structured + vector memory",
-  schema: z.object({
-    actionSummary: z.string(),
-  }),
-});
-
-/* // A tool for fetching a single student’s grade
-export const FetchGradeTool = new Tool({
-  name: "get_grade",
-  description: "Call to retrieve the grade for a student in an assignment",
-  async func(input: string) {
-    const { studentId, assignmentId } = JSON.parse(input);
-    const grade = await getGrade(studentId, assignmentId);
-    return JSON.stringify(grade);
-  },
-});
-
-/* // A tool for writing memory (structured + vector)
-export const WriteMemoryTool = new Tool({
-  name: "save_memory",
-  description:
-    "Save a short summary and metadata to structured + vector memory",
-  async func(input: string) {
-    const { studentId, summary, metadata } = JSON.parse(input);
-    await writeMemory(studentId, summary, metadata);
-    return "MEMORY_SAVED";
-  },
-});
- */
-export const toolsForPosting = [CreateAnswerOnPost];
+export const GetWeeklySummary = tool(
+  async ({ startDate, endDate }: { startDate: string; endDate: string }) =>
+    memoryService.summarizeActionsForDateRange(startDate, endDate),
+  {
+    name: "getWeeklySummary",
+    description:
+      "Call to retrieve a summary of actions taken within a given date range. This tool can be called when you need more information about what is happening or happened in the course throughout time.  The date range should be provided in ISO format.",
+    schema: z.object({
+      startDate: z.string(),
+      endDate: z.string(),
+    }),
+  }
+);

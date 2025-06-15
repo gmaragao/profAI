@@ -1,63 +1,45 @@
 import { IntentAgent } from "@/IntentAgent/intentAgent";
 import dotenv from "dotenv";
-import { IntentClassifier } from "./middleware/intentClassifier";
-import { Orchestrator } from "./middleware/orchestrator";
+import { ActionRepository } from "./Actions/actionRepository";
+import { ActionService } from "./Actions/actionService";
+import { IntentClassifier } from "./IntentAgent/intentClassifier";
+import { IntentRepository } from "./IntentAgent/intentRepository";
+import { Orchestrator } from "./Middleware/orchestrator";
 import { MoodleClient } from "./Moodle/moodleController";
+import { ProactiveEngine } from "./ProactiveEngine";
 import ProfessorAgent from "./ProfessorAgent/agent";
-import MemoryRepository from "./repository/memoryRepository";
+import { CustomVectorStore } from "./RAG/vectorStore";
 dotenv.config();
 
 (async () => {
-  console.log("DATABASE_URL:", process.env.DATABASE_URL); //const agent = new LlmAgent();
   const professorAgent = new ProfessorAgent();
   const intentAgent = new IntentAgent();
+  const intentRepository = new IntentRepository();
   //await agent.getCourseInformation();
   const intentClassifier = new IntentClassifier(intentAgent);
-  const moodleController = new MoodleClient();
-
-  const memoryRepository = new MemoryRepository();
+  const moodleClient = new MoodleClient();
+  const vectorStore = new CustomVectorStore();
+  const actionRepository = new ActionRepository();
   const orchestrator = new Orchestrator(
     intentClassifier,
-    memoryRepository,
-    moodleController
+    moodleClient,
+    intentRepository,
+    professorAgent
   );
+  const actionService = new ActionService(
+    intentClassifier,
+    actionRepository,
+    moodleClient
+  );
+  const proactiveEngine = new ProactiveEngine(orchestrator, actionService);
 
-  //const result = await orchestrator.getPrisma();
+  await vectorStore.processPDFs();
 
-  const result = await orchestrator.getLatestKnownForumData();
+  /*   const queryDate = "What is the date of the exam?";
+  const relevantKnowledge = await vectorStore.searchSubjectMetadata(queryDate);
+  console.log("Relevant Knowledge: ", relevantKnowledge); */
 
-  //const forumPosts = await moodleController.getForumPosts("4");
-
-  //console.log("Forum Posts: ", forumPosts);
-
-  //const proactiveEngine = new ProactiveEngine(orchestrator);
-
-  //proactiveEngine.run();
-
-  /* const forumPosts = await moodleController.getForumPosts("4");
-
-  const classifiedPosts = await intentClassifier.classifyAndSummarizePosts(
-    forumPosts
-  ); */
-
-  /*   const classifiedData = {
-    userId: "3",
-    courseId: "3",
-    summarizedInput: "What is the date of the exam?",
-    forumId: "4",
-    postId: "5",
-    intent: "general_question",
-    source: "forum_post",
-  };
- */
-  //console.log("Classified Data: ", classifiedData);
-  //const response = await professorAgent.invoke(classifiedData);
-  /*   for (const classifiedData of classifiedPosts) {
-    console.log("classifiedData: ", classifiedData);
-    // transform string from classifieidData into object
-    const parsedData = JSON.parse(classifiedData);
-    console.log("Parsed Data: ", parsedData);
-    const response = await professorAgent.invoke(parsedData);
-    console.log("Response from agent: ", response);
-  } */
+  //const proactiveEngine = new ProactiveEngine(orchestrator, actionService);
+  // Generate actions based on classified updates
+  await proactiveEngine.run();
 })();

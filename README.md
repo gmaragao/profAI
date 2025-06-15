@@ -41,3 +41,8 @@ npm run build
 ## Notes
 
 Ensure that your Moodle instance is running locally and the web services are enabled.
+
+### To run the models
+
+- `ollama run gemma3:4b`
+- `ollama run llama3-groq-tool-use`

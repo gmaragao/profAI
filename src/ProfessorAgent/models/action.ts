@@ -1,10 +1,5 @@
-type Action = {
-  functionToBeCalled: {
-    name: string;
-    args: {
-      [key: string]: any;
-    };
-  };
+export type ProfessorAgentAction = {
+  actionToBeTaken: string;
   reason: string;
   priority: number;
   confidence: number;

@@ -31,4 +31,7 @@ export interface DetailedUpdates {
   timeCreated: number; // The time the item was created (example: post creation time)
   timeModified?: number; // The time the item was last updated (example: post update time)
   moduleId: number; // The ID of the module  (example: discussion ID, quiz ID, etc.)
+  typeName: string; // The type of the module (example: "forum", "quiz", etc.)
+  createdAt: string;
+  updatedAt?: string;
 }

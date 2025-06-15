@@ -1,31 +1,29 @@
-import { Orchestrator } from "@/middleware/orchestrator";
+import { ActionService } from "@/Actions/actionService";
+import { Orchestrator } from "@/Middleware/orchestrator";
 import cron from "node-cron";
 
 export class ProactiveEngine {
-  constructor(private orchestrator: Orchestrator) {}
+  constructor(
+    private orchestrator: Orchestrator,
+    private actionService: ActionService
+  ) {}
 
   async run() {
-    // Schedule a cron job to run every 5 minutes
+    const cronFrequencyMinutes = process.env.CRON_FREQUENCY_MINUTES || "5";
+    const cronFrequency = `*/${cronFrequencyMinutes} * * * *`;
+
+    if (!cron.validate(cronFrequency)) {
+      throw new Error(`Invalid cron frequency: ${cronFrequency}`);
+    }
     console.log(
-      "Starting cron job to fetch data from the database every 5 minutes"
+      `Starting cron job to fetch data from the database every ${cronFrequencyMinutes} minutes`
     );
-    cron.schedule("*/5 * * * *", async () => {
-      console.log("Cron job started: Fetching data from the database");
+    cron.schedule(cronFrequency, async () => {
+      console.log(
+        "Cron job started: Get updates, classify posts and generate actions"
+      );
       try {
-        await this.orchestrator.runPendingActions();
-        console.log("Cron job completed successfully");
-      } catch (error) {
-        console.error("Error during cron job execution:", error);
-      }
-    });
-    // Cron job to run every day to get updates from the moodle server
-    console.log(
-      "Starting cron job to fetch data from the Moodle server every day"
-    );
-    cron.schedule("0 0 * * *", async () => {
-      console.log("Cron job started: Fetching data from the Moodle server");
-      try {
-        await this.orchestrator.fetchMoodleUpdates();
+        await this.actionService.generateActions();
         console.log("Cron job completed successfully");
       } catch (error) {
         console.error("Error during cron job execution:", error);
@@ -33,4 +31,3 @@ export class ProactiveEngine {
     });
   }
 }
-

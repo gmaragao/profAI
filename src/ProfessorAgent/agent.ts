@@ -10,11 +10,9 @@ import { ChatOllama } from "@langchain/ollama";
 import path from "path";
 import { fileURLToPath } from "url";
 import {
-  // FetchCourseInformation,
   GetRelevantKnowledge,
   GetSubjectMetadata,
   GetWeeklySummary,
-  SaveMemory,
 } from "./tools";
 
 import fs from "fs";
@@ -78,6 +76,7 @@ export class ProfessorAgent {
       "memorySummary": string --  This field must contain the content in portuguese!
     }}
     6. Use the tools provided to fetch information or perform actions. The tools can provide you knowledge about the subject, actions to get moodle data, rules of the course and also historical data of the course. You should always try to get the answer from the tools first, and only if you cannot find the answer, you should use your own knowledge.
+    7. When calling a tool, translate the content to english, in order to get the best results from the tool. The tool will return the content in english, so you should translate it back to portuguese before returning the final response.
     
     You also should follow these extra instructions:
       {{extra_instructions}}
@@ -95,11 +94,9 @@ export class ProfessorAgent {
     intent: string;
     source: string;
   }) {
-    // Read extra configuration from a txt file for instructions
-    const __filePath = fileURLToPath(import.meta.url);
-    // Read file from the same directory as this file
+    const filePath = fileURLToPath(import.meta.url);
     const extraInstructionsPath = path.join(
-      path.dirname(__filePath),
+      path.dirname(filePath),
       "extraInstructions.txt"
     );
     const extraInstructionsContent = fs
@@ -107,8 +104,6 @@ export class ProfessorAgent {
       .replace(/\n/g, " ");
 
     const toolsByName = {
-      //fetchCourseInformation: FetchCourseInformation,
-      saveMemory: SaveMemory,
       getRelevantKnowledgeFromMaterial: GetRelevantKnowledge,
       getSubjectMetadata: GetSubjectMetadata,
     } as {
@@ -138,10 +133,10 @@ export class ProfessorAgent {
     );
 
     for (const toolCall of toolCallsToExecute) {
-      console.log("Tool call: ", toolCall);
+      console.log(`Calling the ${toolCall.name} tool.`);
+
       const selectedTool = toolsByName[toolCall.name];
       const toolMessage = await selectedTool.invoke(toolCall);
-      console.log(`Calling the ${toolCall.name} tool.`);
       messages.push(toolMessage);
     }
 

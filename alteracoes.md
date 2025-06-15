@@ -12,3 +12,9 @@
 -> MessageDispatcher vai ser assincrono para não sobrecarregar o sistema (filteredActions contém ações que vão ser tomadas no momento e ações que deverão ficar para depois de acordo com grau de importância para não sobrecarregar o sistema)
 
 --> O use case de buscar novas informações está funcionando apenas para "discussions", é necessário adicionar os outros tipos
+
+- TODO: Criar diagrama para summarizer semanal
+  -- TODO: Criar testes
+  -- TODO: Criar JSON de configuracao como se fosse interface do utilizador para configuracoes
+  -- Alterar disciplina para usar portugues
+  -- Ter em mente a ideia de anonimizacao dos dados (exemplo: aluno é mencionado em um post)

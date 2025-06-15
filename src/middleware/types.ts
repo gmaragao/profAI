@@ -1,4 +1,4 @@
-export type ClassifiedResponse = {
+export type ClassifiedIntentFromAgent = {
   userId: string;
   courseId: string;
   summarizedInput: string;
@@ -6,4 +6,6 @@ export type ClassifiedResponse = {
   postId: string;
   intent: string;
   source: string;
+  createdAt: string;
+  updatedAt: string;
 };
