@@ -1,7 +1,9 @@
 //import ProfessorAgent from "@/langchain-agent/agent";
+import { ActionRepository } from "@/Actions/actionRepository";
 import { IntentRepository } from "@/IntentAgent/intentRepository";
 import { MoodleClient } from "@/Moodle/moodleController";
 import { ProfessorAgent } from "@/ProfessorAgent/agent";
+import { ProfessorAgentAction } from "@/ProfessorAgent/models/action";
 import {
   ClassifierInput,
   IntentClassifier,
@@ -35,7 +37,8 @@ export class Orchestrator {
     private intentClassifier: IntentClassifier,
     private moodleClient: MoodleClient,
     private intentRepository: IntentRepository = new IntentRepository(),
-    private professorAgent = new ProfessorAgent()
+    private professorAgent = new ProfessorAgent(),
+    private actionRepository = new ActionRepository()
   ) {}
 
   async getForumData() {
@@ -76,7 +79,7 @@ export class Orchestrator {
     if (lastIntent) {
       console.log("Last classified intent date: ", lastIntent.createdAt);
       sinceDate = new Date(lastIntent?.createdAt); // TODO -> Verify this date
-      sinceDate.setMinutes(sinceDate.getMinutes() + 1); // Add one second to avoid fetching the same post again
+      sinceDate.setMinutes(sinceDate.getMinutes() + 1); // Add one minute to avoid fetching the same post again
     } else {
       sinceDate = new Date(
         new Date().getTime() - 24 * 60 * 60 * 1000 // 24 hours ago
@@ -135,5 +138,65 @@ export class Orchestrator {
     const action = await this.professorAgent.invoke(classifiedIntent);
 
     return action;
+  }
+
+  public async generateActions(): Promise<void> {
+    const classifiedUpdates = await this.getUpdatesAndClassify();
+
+    console.log("Classified Updates: ", classifiedUpdates);
+    if (classifiedUpdates.length === 0) {
+      console.log("No classified updates found. Exiting action generation.");
+      return;
+    } else {
+      for (const classifiedUpdate of classifiedUpdates) {
+        const actionToBeTaken = await this.getActionToBeTaken(classifiedUpdate);
+
+        const parsedAction: ProfessorAgentAction = JSON.parse(actionToBeTaken);
+
+        // Save actions
+        const actionSaved = await this.actionRepository.saveAction(
+          parsedAction
+        );
+        if (parsedAction.actionToBeTaken === "create_forum_post") {
+          // Add a 1s delay
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+          const postResponse = await this.moodleClient.createAnswerOnPost(
+            parseInt(parsedAction.metadata.postId),
+            parsedAction.content,
+            "PROF AI Response: "
+          );
+
+          if (
+            (postResponse && postResponse.status === 200) ||
+            postResponse.status === 201
+          ) {
+            console.log(
+              `Successfully created forum post with ID: ${postResponse.data.postid}`
+            );
+
+            // Save the updated action back to the database
+            await this.actionRepository.updateAction(
+              actionSaved.id,
+              true,
+              true,
+              new Date()
+            );
+          } else {
+            console.log(
+              "Failed to create forum post: ",
+              JSON.stringify(postResponse)
+            );
+
+            // Save the action as unsuccessful
+            await this.actionRepository.updateAction(
+              actionSaved.id,
+              true,
+              false,
+              new Date()
+            );
+          }
+        }
+      }
+    }
   }
 }

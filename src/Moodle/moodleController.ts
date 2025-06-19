@@ -9,19 +9,6 @@ export class MoodleClient {
   private baseUrl = config.moodle.baseUrl;
   private token = config.moodle.token;
 
-  async getCourses(): Promise<any> {
-    try {
-      const response = await axios.get(
-        "http://localhost:8080/webservice/rest/server.php?wstoken=1c37bcdd46b40749639659fb7184ef67&wsfunction=core_course_get_contents&courseid=3&moodlewsrestformat=json"
-      );
-
-      return response.data;
-    } catch (error) {
-      console.error("Error fetching courses from Moodle:", error);
-      throw error;
-    }
-  }
-
   /**
    * @description
    * Fetches forum posts for a specific discussion in Moodle.

@@ -24,7 +24,7 @@ export const GetRelevantKnowledge = tool(
   {
     name: "getRelevantKnowledgeFromMaterial",
     description:
-      "Chamada para recuperar informações relevantes de um livro contendo conteúdo específico da disciplina para responder perguntas, resumir tópicos ou apoiar pesquisas e aprendizado. Este é um conteúdo relacionado à disciplina. Esta ferramenta realizará uma busca vetorial, use o parâmetro de consulta para buscar informações específicas.",
+      "Method to retrieve relevant information from a book containing course-specific content, in order to answer questions, summarize topics, or support research and learning. This tool performs a vector search; use the query parameter to search for specific information.",
     schema: z.object({
       query: z.string(),
     }),
@@ -52,10 +52,7 @@ export const GetWeeklySummary = tool(
   {
     name: "getWeeklySummary",
     description:
-      "Call to retrieve a summary of actions taken within a given date range. This tool can be called when you need more information about what is happening or happened in the course throughout time.  The date range should be provided in ISO format.",
-    schema: z.object({
-      startDate: z.string(),
-      endDate: z.string(),
-    }),
+      "Retrieves course information, including structure, assignments, dates, and related materials. Refers to the course itself and its metadata. Use this tool to get details and dates. Performs vector search; provide a query to retrieve specific information.",
+    schema: z.object({ startDate: z.string(), endDate: z.string() }),
   }
 );

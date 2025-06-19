@@ -15,7 +15,6 @@ dotenv.config();
   const professorAgent = new ProfessorAgent();
   const intentAgent = new IntentAgent();
   const intentRepository = new IntentRepository();
-  //await agent.getCourseInformation();
   const intentClassifier = new IntentClassifier(intentAgent);
   const moodleClient = new MoodleClient();
   const vectorStore = new CustomVectorStore();
@@ -35,11 +34,5 @@ dotenv.config();
 
   await vectorStore.processPDFs();
 
-  /*   const queryDate = "What is the date of the exam?";
-  const relevantKnowledge = await vectorStore.searchSubjectMetadata(queryDate);
-  console.log("Relevant Knowledge: ", relevantKnowledge); */
-
-  //const proactiveEngine = new ProactiveEngine(orchestrator, actionService);
-  // Generate actions based on classified updates
   await proactiveEngine.run();
 })();
