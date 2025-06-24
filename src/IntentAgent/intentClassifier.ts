@@ -1,5 +1,7 @@
-import { IntentAgent } from "@/IntentAgent/intentAgent";
-import { ClassifiedIntentFromAgent } from "../Middleware/types";
+import {
+  ClassifiedIntentFromAgent,
+  IntentAgent,
+} from "@/IntentAgent/intentAgent";
 
 export type ClassifierInput = {
   userId: number;
@@ -17,7 +19,7 @@ export type ClassifierInput = {
 export class IntentClassifier {
   constructor(private intentAgent: IntentAgent) {}
 
-  async classifyAndSummarizePosts(
+  async classifyAndSummarizePost(
     inputToClassify: ClassifierInput
   ): Promise<ClassifiedIntentFromAgent> {
     const prompt = JSON.stringify(inputToClassify);

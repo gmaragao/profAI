@@ -1,15 +1,13 @@
 import axios from "axios";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { config } from "../config";
-import { MoodleClient } from "./moodleController";
+import { MoodleClient } from "./moodleClient";
 
 vi.mock("axios");
-vi.mock("../config", () => ({
-  config: {
-    moodle: {
-      baseUrl: "http://test-moodle.com/webservice/rest/server.php",
-      token: "test-token",
-    },
+// Mock environment variables
+vi.mock("process", () => ({
+  env: {
+    MOODLE_BASE_URL: "http://test-moodle.com/webservice/rest/server.php",
+    MOODLE_TOKEN: "test-token",
   },
 }));
 
@@ -17,6 +15,12 @@ describe("MoodleClient", () => {
   let moodleClient: MoodleClient;
 
   beforeEach(() => {
+    vi.stubEnv(
+      "MOODLE_BASE_URL",
+      "http://test-moodle.com/webservice/rest/server.php"
+    );
+    vi.stubEnv("MOODLE_TOKEN", "test-token");
+
     moodleClient = new MoodleClient();
     vi.mocked(axios.get).mockClear();
     vi.mocked(axios.post).mockClear();
@@ -168,7 +172,7 @@ describe("MoodleClient", () => {
       );
 
       expect(axios.post).toHaveBeenCalledWith(
-        `${config.moodle.baseUrl}/webservice/rest/server.php`,
+        `http://test-moodle.com/webservice/rest/server.php/webservice/rest/server.php`,
         {},
         {
           params: {

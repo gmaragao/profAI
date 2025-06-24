@@ -3,86 +3,93 @@ title Proactive Forum Fetch & Action Sequence
 
 participant ProactiveEngine
 participant Orchestrator
-participant MessageDispatcher
-participant "Memory Repository" as MemoryRepository
-participant "Moodle Web Services" as MoodleAPIService
+participant "Actions Repository" as ActionsRepository
+participant "Moodle Client" as MoodleClient
 participant "Intent Classifier Agent" as IntentAgent
-participant "Agent" as MainAgent
-participant "Moodle Service" as MoodleAPI
-participant MessageDispatcher
-participant ReportsRepository
-participant ActionReporter
+participant "Professor Agent" as ProfessorAgent
+participant "Moodle Web Services" as MoodleAPI
+participant "Vector Database" as VectorDB
 
 == 1. Trigger fetch posts ==
-ProactiveEngine -> Orchestrator : getNewForumData()
+ProactiveEngine -> Orchestrator : generateActions()
 Orchestrator --> ProactiveEngine : Ok response
 
 == 2. Get latest updates from moodle and context from repository ==
-Orchestrator -> MemoryRepository : getLatestForumData()
-MemoryRepository --> Orchestrator : latestForumData
-Orchestrator -> MoodleAPIService : getForumUpdates(id, date)
-MoodleAPIService -> MoodleAPI : GET /core_course_get_updates_since
-MoodleAPI --> MoodleAPIService : moodleUpdates[]
-MoodleAPIService --> Orchestrator : moodleUpdates[]
-
+Orchestrator -> ActionsRepository : getLastClassifiedIntent()
+ActionsRepository --> Orchestrator : lastClassifiedIntent
+Orchestrator -> MoodleClient : getUpdatesSince(courseId, dateFromLastClassifiedIntent)
+MoodleClient -> MoodleAPI : GET /core_course_get_updates_since
+MoodleAPI --> MoodleClient : moodleUpdates[]
+MoodleClient --> Orchestrator : moodleUpdates[]
+note right
+Only posts from the forums are being fetched in the current implementation.
+end note
 Orchestrator -> Orchestrator: getUpdatesPerType(forumUpdates[])
-Orchestrator -> MoodleAPIService : getForumPosts(forumIds)
-MoodleAPIService -> MoodleAPI : GET /mod_forum_get_forum_discussions
-MoodleAPI --> MoodleAPIService : forumUpdates[]
-MoodleAPIService --> Orchestrator : forumUpdates[]
-Orchestrator -> MoodleAPIService : getAssignmentsUpdates(assignmentIds)
-MoodleAPIService -> MoodleAPI : GET /mod_assign_get_assignments
-MoodleAPI --> MoodleAPIService : assignmentsUpdates[]
-MoodleAPIService --> Orchestrator : assignmentsUpdates[]
-Orchestrator -> MoodleAPIService : getQuizzesUpdates(quizzesIds)
-MoodleAPIService -> MoodleAPI : GET /mod_quiz_get_quizzes_by_courses
-MoodleAPI --> MoodleAPIService : quizzesUpdates[]
-MoodleAPIService --> Orchestrator : quizzesUpdates[]
+Orchestrator -> MoodleClient : getForumPosts(courseId)
+MoodleClient -> MoodleAPI : GET /mod_forum_get_forum_discussions
+MoodleAPI --> MoodleClient : forumUpdates[]
+MoodleClient --> Orchestrator : forumUpdates[]
+Orchestrator -> MoodleClient : getAssignmentsUpdates(assignmentIds)
+MoodleClient -> MoodleAPI : GET /mod_assign_get_assignments
+MoodleAPI --> MoodleClient : assignmentsUpdates[]
+MoodleClient --> Orchestrator : assignmentsUpdates[]
+Orchestrator -> MoodleClient : getQuizzesUpdates(quizzesIds)
+MoodleClient -> MoodleAPI : GET /mod_quiz_get_quizzes_by_courses
+MoodleAPI --> MoodleClient : quizzesUpdates[]
+MoodleClient --> Orchestrator : quizzesUpdates[]
 Orchestrator --> Orchestrator: forumUpdates[], assignmentsUpdates[], quizzesUpdates[]
 
 
 
 == 3. Classify Posts and Save ==
-Orchestrator -> IntentAgent : classifyUpdates(forumUpdates[], assignmentsUpdates[], quizzesUpdates[])
-note right: Intent Agent takes only the updates from moodle and classifies them, independent of the previous context 
-IntentAgent --> Orchestrator : classifiedUpdates[]
-Orchestrator -> MemoryRepository : saveClassifiedUpdates(classifiedUpdates[])
-MemoryRepository --> Orchestrator : ok response
+Orchestrator -> IntentAgent : classifyAndSummarizePost(post)
+note right
+Each post will be classified and summarized by the Intent Classifier Agent this method will be called in a for each loop. Currently only the posts are being classified 
+but this should also be implemented for the assignments, quizzes and direct messages.
+Intent Agent takes only the updates from moodle and classifies them, independent of the previous context.
+end note
+IntentAgent --> Orchestrator : classifiedPost
+Orchestrator -> IntentRepository : saveClassifiedIntent(classsifiedPost)
+IntentRepository --> Orchestrator : ok response
 
 
 == 4. Plan action ==
-Orchestrator -> Agent : planActions(classifiedUpdates[])
-MainAgent -> MoodleController : getExtraForumData() (optional -- agent will decide if this is needed)
-MoodleAPIService -> MoodleAPI : GET /mod_forum_get_forum_discussions or other endpoints
-MoodleAPI --> MoodleAPIService : extraData
-MoodleAPIService --> MainAgent : extraData
+Orchestrator -> ProfessorAgent : getActionToBeTaken(classifiedPost)
+ProfessorAgent -> VectorDB : getRelevantKnowledgeFromMaterial()
+VectorDB --> ProfessorAgent : relevantKnowledge[]
+ProfessorAgent -> VectorDB : getSubjectMetadata()
+VectorDB --> ProfessorAgent : subjectMetadata
+note right
+The professor will use the tools available in order to get all the context needed to make a decision.
+These tool calls are to only to the vector database currently, but in the future it could be to other sources like the Moodle API or other repositories. 
+This method call can be called multiple times, depending on the context needed.
+There are two methods that it can call getSubjectMetadata and getRelevantKnowledgeFromMaterial
+end note 
+
 
 
 == 5. Execute Actions == 
-MainAgent -> MemoryRepository : getForumContext(id)
-note right: Agent may or may not need to get the context from the repository, depending on its decision (LLM).
-MemoryRepository --> MainAgent : latestForumContext
-MainAgent -> MemoryRepository : getSubjectContext(id)
-MemoryRepository --> MainAgent : subjectContext
-
-MainAgent --> Orchestrator : suggestedActions[] 
+ProfessorAgent --> Orchestrator : action 
 note right
 Suggested actions include confidence, priority level and possibly a due date.
 These attributes will be used to filter and sort the actions in order to make the system know if it should act or not and when.
 end note 
-Orchestrator -> MessageDispatcher : filterActions(suggestedActions)
-MessageDispatcher --> Orchestrator : actionsFilteredAndSortedByPriority[]
-Orchestrator -> ActionReporter : reportActions(actionsFilteredAndSortedByPriority[])
-ActionReporter -> ReportsRepository : saveActions(actionsFilteredAndSortedByPriority[])
-ReportsRepository --> ActionReporter : ok response
-ActionReporter --> Orchestrator : ok response
+Orchestrator -> Orchestrator : filterActions(action)
+note right
+This process of action filtering was not implemented and it would include a list of actions to be filtered and sorted
+end note
+Orchestrator --> Orchestrator : actionsFilteredAndSortedByPriority[]
+Orchestrator -> ActionsRepository : saveAction(actionsFilteredAndSortedByPriority[])
+ActionsRepository --> Orchestrator : ok response
 Orchestrator -> Orchestrator : executeActions(filteredActions[]) 
-note right: Actions execution is detailed in a different diagram.
-ActionReporter -> ReportsRepository : saveActions(actionsFilteredAndSortedByPriority[])
-ReportsRepository --> ActionReporter : ok response
-ActionReporter --> Orchestrator : ok response
+Orchestrator --> Orchestrator: ok response
+Orchestrator -> MoodleClient: createAnswerOnPost(postId, actionContent)
+MoodleClient -> MoodleAPI : POST /mod_forum_add_discussion_post
+MoodleAPI --> MoodleClient : ok response
+MoodleClient --> Orchestrator : ok response
 
 
-Orchestrator -> ActionReporter : updateActionsAccordingToResponse()
-ActionReporter --> Orchestrator : ok response
+
+Orchestrator -> ActionsRepository : updateAction(actionId, wasActionTaken, wasActionSuccessful, actionDate)
+ActionsRepository --> Orchestrator : ok response
 @enduml

@@ -10,7 +10,7 @@ actor "Student" as StudentActor
 package "External Services" {
     interface "Moodle Web Services\n(REST API)" as MoodleWebServicesAPI
     component "Moodle LMS" as Moodle <<external service>>
-    Moodle ..> MoodleWebServicesAPI : <<use>>  
+    MoodleWebServicesAPI ..> Moodle : <<use>> REST GET/POST/DELETE
     component "Ollama LLM Service" as OllamaLLM <<external service>>
 }
 
@@ -24,66 +24,69 @@ package "Frontend" {
 
   ProfessorActor ..> ReportViewer : <<interaction>> view reports
   ProfessorActor ..> AgentConfigurator : <<interaction>> upload config
-}
+} 
 
 ' Backend package
 package "Backend" {
   control  "UI Controller"           as UIController
   entity   "Reports Repository"      as ReportsRepo
   component "Orchestrator"              as Orchestrator <<component>>
-  control  "Moodle Service"       as MoodleService
-  component "Message Dispatcher"     as MessageDispatcher <<component>>
-  entity   "Memory Repository"       as MemoryRepository
-  component "Action Reporter"        as ActionReporter <<component>>
+  control  "Moodle Client"       as MoodleClient
+  entity "Intent Repository" as IntentRepository
+  entity "VectorStore" as VectorStore
 
   'LLM-backed agent components
   component "Intent Classifier Agent" as IntentAgent <<LLM-powered component>>
-  component "Agent"         as ProfessorAgent <<LLM-powered component>>  
+  component "Professor Agent"         as ProfessorAgent <<LLM-powered component>>  
   ' Dependency relationships to Ollama
-  IntentAgent ..> OllamaLLM : <<use>> inference
-  ProfessorAgent ..> OllamaLLM : <<use>> inference
+  IntentAgent ..> OllamaLLM : <<use>> chat
+  ProfessorAgent ..> OllamaLLM : <<use>> chat
 
   component "Proactive Engine"        as ProactiveEngine <<component>>
+  entity "Action Repository"       as ActionRepository 
 }
 
 
 ' Memory stores
 package "Memory Stores" {
-  database "Structured Memory DB"    as StructuredDB
-  database "Vector Memory DB"        as VectorDB
+  database "Structured Memory DB (MongoDB)"    as StructuredDB
+  database "Vector DB (Qdrant)"        as VectorDB
 }
 
 ' Frontend → Backend interactions
 UIController ..> ReportViewer       : <<data>> reports
 AgentConfigurator ..> UIController   : <<data>> data config to be deployed
 
+ProfessorActor ..> AgentConfigurator : <<data>> cron job frequency
+UIController ..> ProactiveEngine     : <<data>> config proactive engine (cron job freq.)
+
+
+StructuredDB ..> ReportsRepo       : <<data>> actions data to generate reports
 ReportsRepo ..> UIController       : <<data>> reports
 UIController ..> ProfessorAgent        : <<data>> data config to be deployed
 
 ' Orchestrator flow
-MoodleService ..> MoodleWebServicesAPI      : <<use>> REST GET/POST
+MoodleClient ..> MoodleWebServicesAPI      : <<use>> REST GET/POST
 
-MoodleService ..> Orchestrator     : <<data>> raw input
+MoodleClient ..> Orchestrator     : <<data>> raw input
 Orchestrator ..> IntentAgent           : <<data>> raw input for classification
 Orchestrator ..> ProfessorAgent       : <<data>> classified input
-Orchestrator ..> MemoryRepository     : <<data>>  summary & metadata to be saved
 ProfessorAgent ..> Orchestrator : <<data>> suggested actions
-Orchestrator ..> MessageDispatcher : <<data>> suggested actions
-MessageDispatcher ..> MoodleService : <<data>> filtered actions
+Orchestrator ..> MoodleClient : <<data>> actions to be taken
 
+IntentAgent ..> IntentRepository : <<data>> classified intent data
+IntentRepository ..> StructuredDB : <<data>> classified intent data to be saved
 
 ' Professor Agent flow
-MemoryRepository ..> ProfessorAgent : <<data>> context data
-MoodleService ..> ProfessorAgent : <<data>> extra data based on professor request
+VectorDB ..> ProfessorAgent : <<data>> context data
 
-MemoryRepository ..> StructuredDB   : <<data>> structured data to be saved
-MemoryRepository ..> VectorDB       : <<data>> embedding data to be saved
+ActionRepository ..> StructuredDB   : <<data>> action data to be saved
+AgentConfigurator ..> VectorStore       : <<data>>  documents for context 
+VectorStore ..> VectorDB : <<data>> vectorized data for context
 
-Orchestrator ..> ActionReporter  : <<data>> actions taken
-ActionReporter ..> ReportsRepo     : <<data>> reports data to be saved
-ReportsRepo ..> StructuredDB       : <<data>> structured reports data
+Orchestrator ..>  ActionRepository     : <<data>> actions data to be saved
+ActionRepository ..> StructuredDB       : <<data>> actions to be taken and taken data
 
 ' Proactive engine triggers
-ProactiveEngine ..> Orchestrator : <<data>> scheduled triggers
-
+ProactiveEngine ..> Orchestrator : <<action>> trigger action generation
 @enduml

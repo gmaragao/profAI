@@ -1,5 +1,5 @@
 import { ClassifiedIntent, PrismaClient } from "@/generated/prisma";
-import { ClassifiedIntentFromAgent } from "@/Middleware/types";
+import { ClassifiedIntentFromAgent } from "./intentAgent";
 
 export class IntentRepository {
   async getLastClassifiedIntent(): Promise<ClassifiedIntent | null> {

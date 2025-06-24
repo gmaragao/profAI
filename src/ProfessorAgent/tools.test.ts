@@ -1,86 +1,90 @@
-import { MemoryService } from "@/Memory/memoryService.js";
-import { MoodleClient } from "@/Moodle/moodleController.js";
-import { CustomVectorStore } from "@/RAG/retriever.js";
+import { CustomVectorStore } from "@/RAG/vectorStore.js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  FetchForumPostsTool,
-  GetRelevantKnowledge,
-  GetSubjectMetadata,
-  GetWeeklySummary,
-} from "./tools.js";
-
-vi.mock("@/Moodle/moodleController");
-vi.mock("@/Memory/memoryService");
-vi.mock("@/RAG/vectorStore");
+import { GetRelevantKnowledge, GetSubjectMetadata } from "./tools";
 
 describe("ProfessorAgent Tools", () => {
-  let mockMoodleClient: any;
-  let mockMemoryService: any;
-  let mockVectorStore: any;
+  // Spy on console.log
+  const consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
 
   beforeEach(() => {
-    mockMoodleClient = new MoodleClient();
-    mockMemoryService = new MemoryService();
-    mockVectorStore = new CustomVectorStore();
-
-    // Setup mocks for the module imports
-    vi.mocked(MoodleClient).mockImplementation(() => mockMoodleClient);
-    vi.mocked(MemoryService).mockImplementation(() => mockMemoryService);
-    vi.mocked(CustomVectorStore).mockImplementation(() => mockVectorStore);
-  });
-
-  afterEach(() => {
+    // Clear all mocks before each test
     vi.clearAllMocks();
   });
 
-  describe("FetchForumPostsTool", () => {
-    it("should have correct schema and name", () => {
-      expect(FetchForumPostsTool.name).toBe("get_forum_posts");
-      expect(FetchForumPostsTool.description).toContain("retrieve posts");
-      expect(FetchForumPostsTool.schema.shape).toHaveProperty("discussionId");
-    });
-
-    it("should call MoodleClient.getForumPosts with correct parameters", async () => {
-      mockMoodleClient.getForumPosts = vi.fn().mockResolvedValue({
-        posts: [{ id: 1, subject: "Test post" }],
-        forumid: 123,
-        courseid: 456,
-        warnings: [],
-      });
-
-      await FetchForumPostsTool.invoke({ discussionId: "123" });
-
-      expect(mockMoodleClient.getForumPosts).toHaveBeenCalledWith("123");
-    });
+  afterEach(() => {
+    consoleLogSpy.mockClear();
   });
 
   describe("GetRelevantKnowledge", () => {
-    it("should have correct schema and name", () => {
+    it("should have correct schema and metadata", () => {
       expect(GetRelevantKnowledge.name).toBe(
         "getRelevantKnowledgeFromMaterial"
       );
       expect(GetRelevantKnowledge.description).toContain(
-        "recuperar informações relevantes"
+        "Utilize esta ferramenta para responder perguntas sobre conceitos, teorias, definições ou explicações relacionadas ao conteúdo estudado."
       );
       expect(GetRelevantKnowledge.schema.shape).toHaveProperty("query");
     });
 
     it("should call vectorStore.searchSubjectKnowledge with query parameter", async () => {
-      mockVectorStore.searchSubjectKnowledge.mockResolvedValue(
-        "Knowledge content"
-      );
+      // Spy on prototype directly
+      const searchSpy = vi
+        .spyOn(CustomVectorStore.prototype, "searchSubjectKnowledge")
+        .mockResolvedValue("Mocked knowledge");
 
-      const result = await GetRelevantKnowledge.invoke({ query: "test query" });
+      const result = await GetRelevantKnowledge.invoke({
+        query: "film analysis",
+      });
 
-      expect(mockVectorStore.searchSubjectKnowledge).toHaveBeenCalledWith(
-        "test query"
+      expect(searchSpy).toHaveBeenCalledWith("film analysis");
+      expect(result).toBe("Mocked knowledge");
+    });
+
+    it("should handle empty query parameters", async () => {
+      const searchSpy = vi
+        .spyOn(CustomVectorStore.prototype, "searchSubjectKnowledge")
+        .mockResolvedValue("General course information");
+
+      const result = await GetRelevantKnowledge.invoke({ query: "" });
+
+      // Should still call vector store with empty string
+      expect(searchSpy).toHaveBeenCalledWith("");
+      expect(result).toBe("General course information");
+    });
+
+    it("should handle undefined search results", async () => {
+      // Setup spy to return undefined
+      const searchSpy = vi
+        .spyOn(CustomVectorStore.prototype, "searchSubjectKnowledge")
+        .mockResolvedValue(undefined);
+
+      const result = await GetRelevantKnowledge.invoke({
+        query: "nonexistent topic",
+      });
+
+      expect(searchSpy).toHaveBeenCalledWith("nonexistent topic");
+      expect(result).toBeUndefined();
+    });
+
+    it("should handle special characters in query", async () => {
+      const searchSpy = vi
+        .spyOn(CustomVectorStore.prototype, "searchSubjectKnowledge")
+        .mockResolvedValue("Special results");
+
+      const result = await GetRelevantKnowledge.invoke({
+        query: "search with special chars: !@#$%",
+      });
+
+      // Should pass the special characters unchanged to the vector store
+      expect(searchSpy).toHaveBeenCalledWith(
+        "search with special chars: !@#$%"
       );
-      expect(result).toBe("Knowledge content");
+      expect(result).toBe("Special results");
     });
   });
 
   describe("GetSubjectMetadata", () => {
-    it("should have correct schema and name", () => {
+    it("should have correct schema and metadata", () => {
       expect(GetSubjectMetadata.name).toBe("getSubjectMetadata");
       expect(GetSubjectMetadata.description).toContain(
         "recuperar informações do curso"
@@ -89,50 +93,108 @@ describe("ProfessorAgent Tools", () => {
     });
 
     it("should call vectorStore.searchSubjectMetadata with query parameter", async () => {
-      mockVectorStore.searchSubjectMetadata.mockResolvedValue(
-        "Metadata content"
+      // Spy on prototype directly
+      const searchSpy = vi
+        .spyOn(CustomVectorStore.prototype, "searchSubjectMetadata")
+        .mockResolvedValue(
+          "Course structure: 12 weeks with final exam on November 10th"
+        );
+
+      // Call the tool
+      const result = await GetSubjectMetadata.invoke({ query: "exam date" });
+
+      // Verify console log was called
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        "Getting subject metadata: ",
+        "exam date"
       );
 
-      const result = await GetSubjectMetadata.invoke({ query: "test query" });
+      // Verify vector store search was called
+      expect(searchSpy).toHaveBeenCalledWith("exam date");
 
-      expect(mockVectorStore.searchSubjectMetadata).toHaveBeenCalledWith(
-        "test query"
+      // Verify the result
+      expect(result).toBe(
+        "Course structure: 12 weeks with final exam on November 10th"
       );
-      expect(result).toBe("Metadata content");
+    });
+
+    it("should handle errors from vector store search", async () => {
+      // Setup spy to throw an error
+      const searchSpy = vi
+        .spyOn(CustomVectorStore.prototype, "searchSubjectMetadata")
+        .mockRejectedValue(new Error("Metadata search failed"));
+
+      // Verify the tool propagates the error
+      await expect(
+        GetSubjectMetadata.invoke({ query: "error test" })
+      ).rejects.toThrow("Metadata search failed");
+
+      // Verify vector store was still called with correct parameters
+      expect(searchSpy).toHaveBeenCalledWith("error test");
+    });
+
+    it("should handle long query parameters", async () => {
+      const longQuery =
+        "This is a very long query that contains multiple sentences and should test the robustness of the search functionality. It includes various details about the course structure, assignments, and specific questions about the exam dates and format.";
+
+      const searchSpy = vi
+        .spyOn(CustomVectorStore.prototype, "searchSubjectMetadata")
+        .mockResolvedValue("Comprehensive course information");
+
+      const result = await GetSubjectMetadata.invoke({ query: longQuery });
+
+      // Should handle the long query correctly
+      expect(searchSpy).toHaveBeenCalledWith(longQuery);
+      expect(result).toBe("Comprehensive course information");
+    });
+
+    it("should handle multilingual query parameters", async () => {
+      const portugueseQuery = "data do exame final";
+
+      const searchSpy = vi
+        .spyOn(CustomVectorStore.prototype, "searchSubjectMetadata")
+        .mockResolvedValue("Data do exame final: 10 de novembro");
+
+      const result = await GetSubjectMetadata.invoke({
+        query: portugueseQuery,
+      });
+
+      expect(searchSpy).toHaveBeenCalledWith(portugueseQuery);
+      expect(result).toBe("Data do exame final: 10 de novembro");
     });
   });
 
-  describe("GetWeeklySummary", () => {
-    it("should have correct schema and name", () => {
-      expect(GetWeeklySummary.name).toBe("getWeeklySummary");
-      expect(GetWeeklySummary.description).toContain(
-        "retrieve a summary of actions"
-      );
-      expect(GetWeeklySummary.schema.shape).toHaveProperty("startDate");
-      expect(GetWeeklySummary.schema.shape).toHaveProperty("endDate");
+  describe("Tool integration in the agent workflow", () => {
+    it("should be callable through LangChain's tool interface", async () => {
+      // Setup spy
+      const searchSpy = vi
+        .spyOn(CustomVectorStore.prototype, "searchSubjectKnowledge")
+        .mockResolvedValue("Result");
+
+      // Tools should have the standard LangChain tool interface
+      expect(typeof GetRelevantKnowledge.invoke).toBe("function");
+      expect(GetRelevantKnowledge).toHaveProperty("name");
+      expect(GetRelevantKnowledge).toHaveProperty("description");
+      expect(GetRelevantKnowledge).toHaveProperty("schema");
+
+      // Should be callable with object parameters
+      const result = await GetRelevantKnowledge.invoke({ query: "test" });
+      expect(searchSpy).toHaveBeenCalledWith("test");
+      expect(result).toBe("Result");
     });
 
-    it("should call memoryService.summarizeActionsForDateRange with date parameters", async () => {
-      const mockSummary = {
-        weekOverview: "Test overview",
-        keyActivities: [],
-        assignmentsSummary: [],
-        discussionsHighlights: [],
-      };
+    it("should validate input parameters", async () => {
+      const searchSpy = vi
+        .spyOn(CustomVectorStore.prototype, "searchSubjectMetadata")
+        .mockResolvedValue("Valid result");
 
-      mockMemoryService.summarizeActionsForDateRange.mockResolvedValue(
-        mockSummary
-      );
+      // @ts-ignore - intentionally omitting required parameter
+      await expect(GetSubjectMetadata.invoke({})).rejects.toThrow();
 
-      const result = await GetWeeklySummary.invoke({
-        startDate: "2023-05-01",
-        endDate: "2023-05-07",
-      });
-
-      expect(
-        mockMemoryService.summarizeActionsForDateRange
-      ).toHaveBeenCalledWith("2023-05-01", "2023-05-07");
-      expect(result).toEqual(mockSummary);
+      // Correct parameters should work
+      const result = await GetSubjectMetadata.invoke({ query: "valid query" });
+      expect(searchSpy).toHaveBeenCalledWith("valid query");
+      expect(result).toBe("Valid result");
     });
   });
 });

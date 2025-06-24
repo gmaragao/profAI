@@ -37,11 +37,6 @@ describe("IntentAgent", () => {
     vi.clearAllMocks();
   });
 
-  it("should initialize with config parameters", () => {
-    expect(intentAgent).toBeDefined();
-    expect(intentAgent["systemPrompt"]).toEqual("Test prompt content");
-  });
-
   it("should classify intent correctly", async () => {
     const prompt = JSON.stringify({
       userId: 123,

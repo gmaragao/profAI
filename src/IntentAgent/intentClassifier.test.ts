@@ -1,6 +1,5 @@
-import { ClassifiedIntentFromAgent } from "@/Middleware/types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { IntentAgent } from "./intentAgent";
+import { ClassifiedIntentFromAgent, IntentAgent } from "./intentAgent";
 import { ClassifierInput, IntentClassifier } from "./intentClassifier";
 
 vi.mock("./intentAgent");
@@ -42,7 +41,7 @@ describe("IntentClassifier", () => {
 
     mockIntentAgent.classifyIntent = vi.fn().mockResolvedValue(expectedOutput);
 
-    const result = await intentClassifier.classifyAndSummarizePosts(input);
+    const result = await intentClassifier.classifyAndSummarizePost(input);
 
     expect(mockIntentAgent.classifyIntent).toHaveBeenCalledWith(
       JSON.stringify(input)
@@ -66,7 +65,7 @@ describe("IntentClassifier", () => {
       .mockRejectedValue(new Error("Classification error"));
 
     await expect(
-      intentClassifier.classifyAndSummarizePosts(input)
+      intentClassifier.classifyAndSummarizePost(input)
     ).rejects.toThrow("Classification error");
   });
 });

@@ -1,12 +1,8 @@
-import { config } from "@/config";
 import axios from "axios";
 import * as fs from "fs";
 
 export class MemoryAgent {
-  private apiUrl = config.ollama.useLocal
-    ? config.ollama.localUrl
-    : config.ollama.apiUrl;
-  private apiKey = config.ollama.apiKey;
+  private apiUrl = process.env.OLLAMA_API_URL || "";
 
   // Read the system prompt from file
   private systemPrompt = fs.readFileSync(

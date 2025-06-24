@@ -53,8 +53,8 @@ export class MemoryService {
         (action: any) => ({
           actionToBeTaken: action.actionToBeTaken,
           reason: action.reason,
-          wasActionTaken: action.wasActionTaken, // Default value, can be updated based on logic
-          actionSuccessful: action.actionSuccessful, // Default value, can be updated based on logic
+          wasActionTaken: action.wasActionTaken,
+          actionSuccessful: action.actionSuccessful,
           content: action.content,
           metadata: {
             userId: "system", // System-level summary
@@ -64,8 +64,8 @@ export class MemoryService {
             intent: "summarize_week",
             source: "system",
           },
-          createdAt: action.createdAt, // Current timestamp
-          updatedAt: action.updatedAt, // Default value, can be updated based on logic
+          createdAt: action.createdAt,
+          updatedAt: action.updatedAt,
         })
       );
 

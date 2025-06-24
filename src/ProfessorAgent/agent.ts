@@ -9,11 +9,7 @@ import { DynamicStructuredTool } from "@langchain/core/tools";
 import { ChatOllama } from "@langchain/ollama";
 import path from "path";
 import { fileURLToPath } from "url";
-import {
-  GetRelevantKnowledge,
-  GetSubjectMetadata,
-  GetWeeklySummary,
-} from "./tools";
+import { GetRelevantKnowledge, GetSubjectMetadata } from "./tools";
 
 import fs from "fs";
 
@@ -29,7 +25,7 @@ export class ProfessorAgent {
       baseUrl: "http://localhost:11434",
     });
 
-    this.tools = [GetRelevantKnowledge, GetSubjectMetadata, GetWeeklySummary];
+    this.tools = [GetRelevantKnowledge, GetSubjectMetadata];
 
     this.prompt = ChatPromptTemplate.fromMessages([
       SystemMessagePromptTemplate.fromTemplate(`
@@ -79,7 +75,7 @@ export class ProfessorAgent {
     7. When calling a tool, translate the content to english, in order to get the best results from the tool. The tool will return the content in english, so you should translate it back to portuguese before returning the final response.
     
     You also should follow these extra instructions:
-      {{extra_instructions}}
+      {extra_instructions}
     `),
       HumanMessagePromptTemplate.fromTemplate("USER_DATA: {user_data}"),
     ]);
@@ -128,6 +124,11 @@ export class ProfessorAgent {
 
     const aiMessage = await this.llm.bindTools(this.tools).invoke(messages);
 
+    if (aiMessage.tool_calls === undefined) {
+      console.error("No tool calls found in the LLM message.");
+      return aiMessage.content;
+    }
+
     const toolCallsToExecute = (aiMessage.tool_calls as ToolCall[]).filter(
       (toolCall) => toolsByName[toolCall.name]
     );
@@ -136,8 +137,15 @@ export class ProfessorAgent {
       console.log(`Calling the ${toolCall.name} tool.`);
 
       const selectedTool = toolsByName[toolCall.name];
-      const toolMessage = await selectedTool.invoke(toolCall);
-      messages.push(toolMessage);
+      try {
+        const toolMessage = await selectedTool.invoke(toolCall);
+        messages.push(toolMessage);
+      } catch (error) {
+        console.error(
+          `Error invoking tool ${toolCall.name}:`,
+          error instanceof Error ? error.message : error
+        );
+      }
     }
 
     const response = await this.llm.invoke(messages);

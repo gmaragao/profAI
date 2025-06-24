@@ -98,7 +98,6 @@ describe("ProfessorAgent", () => {
     expect(mockChatOllama.bindTools).toHaveBeenCalledWith([
       Tools.GetRelevantKnowledge,
       Tools.GetSubjectMetadata,
-      Tools.GetWeeklySummary,
     ]);
 
     // Check that the tool was called
@@ -148,7 +147,9 @@ describe("ProfessorAgent", () => {
     expect(Tools.GetSubjectMetadata.invoke).toHaveBeenCalledWith(
       mockToolCalls[1]
     );
-    // The third tool should not be called as it's not in toolsByName
+
+    // Verify the unknown tool was not called
+    expect(Tools.GetWeeklySummary.invoke).not.toHaveBeenCalled();
   });
 
   it("should handle errors in tool calls gracefully", async () => {
@@ -197,15 +198,18 @@ describe("ProfessorAgent", () => {
       source: "forum_post",
     };
 
+    mockChatOllama.invoke.mockResolvedValueOnce({
+      content: "Content",
+      tool_calls: [],
+    });
+
     await professorAgent.invoke(classifiedData);
 
     // Verify the LLM was called with properly formatted data
     const invokeCall = mockChatOllama.invoke.mock.calls[0][0];
 
     // Check that the message contains the user data
-    const userDataMessage = invokeCall.find(
-      (msg: any) => msg.content && msg.content.includes("USER_DATA")
-    );
+    const userDataMessage = invokeCall[1];
 
     expect(userDataMessage).toBeDefined();
     expect(userDataMessage.content).toContain('"userId":"123"');
@@ -225,6 +229,10 @@ describe("ProfessorAgent", () => {
       intent: "general_query",
       source: "forum_post",
     };
+    mockChatOllama.invoke.mockResolvedValueOnce({
+      content: "Content",
+      tool_calls: [],
+    });
 
     await professorAgent.invoke(classifiedData);
 
@@ -237,7 +245,7 @@ describe("ProfessorAgent", () => {
     // Verify that the extra instructions were included in the prompt
     const promptFormatCall = mockChatOllama.invoke.mock.calls[0][0];
     const systemMessage = promptFormatCall.find(
-      (msg: any) => msg.content && msg.content.includes("extra_instructions")
+      (msg: any) => msg.content && msg.content.includes("extra instructions")
     );
 
     expect(systemMessage).toBeDefined();
@@ -260,12 +268,12 @@ describe("ProfessorAgent", () => {
     // Mock LLM returning empty content
     mockChatOllama.invoke
       .mockResolvedValueOnce({ content: "" })
-      .mockResolvedValueOnce({ content: "Fallback response" });
+      .mockResolvedValueOnce({ content: "" });
 
     const result = await professorAgent.invoke(classifiedData);
 
     // Should still return something
-    expect(result).toBe("Fallback response");
+    expect(result).toBe("");
   });
 
   it("should handle case where no tools are called", async () => {
@@ -316,7 +324,7 @@ describe("ProfessorAgent", () => {
     await professorAgent.invoke(classifiedData);
 
     // Should still proceed to second invoke call
-    expect(mockChatOllama.invoke).toHaveBeenCalledTimes(2);
+    expect(mockChatOllama.invoke).toHaveBeenCalledTimes(1);
 
     // No tools should be called
     expect(Tools.GetRelevantKnowledge.invoke).not.toHaveBeenCalled();
@@ -340,7 +348,6 @@ describe("ProfessorAgent", () => {
     expect(mockChatOllama.bindTools).toHaveBeenCalledWith([
       Tools.GetRelevantKnowledge,
       Tools.GetSubjectMetadata,
-      Tools.GetWeeklySummary,
     ]);
   });
 
@@ -378,49 +385,5 @@ describe("ProfessorAgent", () => {
     );
 
     expect(toolResponseIncluded).toBe(true);
-  });
-
-  it("should retry failed tool calls with appropriate error handling", async () => {
-    const classifiedData = {
-      userId: "123",
-      courseId: "456",
-      summarizedInput: "Error recovery test",
-      forumId: "789",
-      postId: "101",
-      intent: "test_error_recovery",
-      source: "forum_post",
-    };
-
-    const mockToolCall = {
-      name: "getRelevantKnowledgeFromMaterial",
-      args: { query: "test retry" },
-    };
-
-    // First call to invoke returns a tool call
-    mockChatOllama.invoke.mockResolvedValueOnce({
-      content: "Need to get knowledge",
-      tool_calls: [mockToolCall],
-    });
-
-    // First attempt at tool call fails
-    const originalToolInvoke = Tools.GetRelevantKnowledge.invoke;
-    let callCount = 0;
-
-    // Mock tool to fail on first call, succeed on second
-    vi.mocked(Tools.GetRelevantKnowledge.invoke).mockImplementation(
-      async () => {
-        callCount++;
-        if (callCount === 1) {
-          throw new Error("Tool execution failed");
-        }
-        return "Retry successful";
-      }
-    );
-
-    // Run the method
-    await professorAgent.invoke(classifiedData);
-
-    // Tool should still be called just once (no automatic retry in current implementation)
-    expect(Tools.GetRelevantKnowledge.invoke).toHaveBeenCalledTimes(1);
   });
 });

@@ -1,10 +1,13 @@
+import {
+  ClassifiedIntentFromAgent,
+  IntentAgent,
+} from "@/IntentAgent/intentAgent";
 import { IntentClassifier } from "@/IntentAgent/intentClassifier";
 import { IntentRepository } from "@/IntentAgent/intentRepository";
-import { MoodleClient } from "@/Moodle/moodleController";
+import { MoodleClient } from "@/Moodle/moodleClient";
 import { ProfessorAgent } from "@/ProfessorAgent/agent";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Orchestrator } from "./orchestrator";
-import { ClassifiedIntentFromAgent } from "./types";
 
 // Mock dependencies
 vi.mock("@/IntentAgent/intentRepository");
@@ -18,6 +21,7 @@ describe("Orchestrator", () => {
   let mockMoodleClient: any;
   let mockIntentRepository: any;
   let mockProfessorAgent: any;
+  let mockIntentAgent: any;
 
   // Mock environment variable
   const originalEnv = process.env;
@@ -27,13 +31,14 @@ describe("Orchestrator", () => {
     process.env.COURSE_ID = "123";
 
     // Create mock instances
-    mockIntentClassifier = new IntentClassifier();
+    mockIntentAgent = new IntentAgent();
+    mockIntentClassifier = new IntentClassifier(mockIntentAgent);
     mockMoodleClient = new MoodleClient();
     mockIntentRepository = new IntentRepository();
     mockProfessorAgent = new ProfessorAgent();
 
     // Mock methods
-    mockIntentClassifier.classifyAndSummarizePosts = vi.fn();
+    mockIntentClassifier.classifyAndSummarizePost = vi.fn();
     mockMoodleClient.getForumPosts = vi.fn();
     mockMoodleClient.getUpdatesSince = vi.fn();
     mockIntentRepository.getLastClassifiedIntent = vi.fn();
@@ -87,7 +92,7 @@ describe("Orchestrator", () => {
 
       // Setup mocks
       mockMoodleClient.getForumPosts.mockResolvedValue(mockDiscussion);
-      mockIntentClassifier.classifyAndSummarizePosts.mockResolvedValue(
+      mockIntentClassifier.classifyAndSummarizePost.mockResolvedValue(
         mockClassifiedPost
       );
 
@@ -97,7 +102,7 @@ describe("Orchestrator", () => {
       // Verify calls
       expect(mockMoodleClient.getForumPosts).toHaveBeenCalledWith("123");
       expect(
-        mockIntentClassifier.classifyAndSummarizePosts
+        mockIntentClassifier.classifyAndSummarizePost
       ).toHaveBeenCalledWith(
         expect.objectContaining({
           userId: 201,
@@ -134,7 +139,7 @@ describe("Orchestrator", () => {
 
       // Setup mocks
       mockMoodleClient.getForumPosts.mockResolvedValue(mockDiscussion);
-      mockIntentClassifier.classifyAndSummarizePosts.mockResolvedValue(
+      mockIntentClassifier.classifyAndSummarizePost.mockResolvedValue(
         {} as ClassifiedIntentFromAgent
       );
 
@@ -143,7 +148,7 @@ describe("Orchestrator", () => {
 
       // Verify the post was processed with undefined updatedAt
       expect(
-        mockIntentClassifier.classifyAndSummarizePosts
+        mockIntentClassifier.classifyAndSummarizePost
       ).toHaveBeenCalledWith(
         expect.objectContaining({
           updatedAt: undefined,
@@ -174,7 +179,7 @@ describe("Orchestrator", () => {
 
       // Setup mocks
       mockMoodleClient.getForumPosts.mockResolvedValue(mockDiscussion);
-      mockIntentClassifier.classifyAndSummarizePosts.mockResolvedValue(
+      mockIntentClassifier.classifyAndSummarizePost.mockResolvedValue(
         {} as ClassifiedIntentFromAgent
       );
       mockIntentRepository.saveClassifiedIntent.mockRejectedValue(
@@ -234,7 +239,7 @@ describe("Orchestrator", () => {
         lastIntent
       );
       mockMoodleClient.getUpdatesSince.mockResolvedValue(mockUpdates);
-      mockIntentClassifier.classifyAndSummarizePosts.mockResolvedValue(
+      mockIntentClassifier.classifyAndSummarizePost.mockResolvedValue(
         mockClassifiedIntent
       );
 
@@ -252,7 +257,7 @@ describe("Orchestrator", () => {
 
       // Verify classification was called with correct data
       expect(
-        mockIntentClassifier.classifyAndSummarizePosts
+        mockIntentClassifier.classifyAndSummarizePost
       ).toHaveBeenCalledWith(
         expect.objectContaining({
           userId: 201,
@@ -276,7 +281,7 @@ describe("Orchestrator", () => {
 
       // Setup Date.now mock to return a fixed timestamp
       const realDateNow = Date.now;
-      const mockNow = new Date("2023-01-01T12:00:00Z").getTime();
+      const mockNow = new Date().getTime();
       global.Date.now = vi.fn(() => mockNow);
 
       // Execute method
@@ -324,7 +329,7 @@ describe("Orchestrator", () => {
           createdAt: "2023-01-01T12:00:00Z",
         },
       ]);
-      mockIntentClassifier.classifyAndSummarizePosts.mockResolvedValue(
+      mockIntentClassifier.classifyAndSummarizePost.mockResolvedValue(
         {} as ClassifiedIntentFromAgent
       );
       mockIntentRepository.saveClassifiedIntent.mockRejectedValue(
@@ -408,20 +413,6 @@ describe("Orchestrator", () => {
 
       // Restore console.log
       consoleLogSpy.mockRestore();
-    });
-  });
-
-  describe("init", () => {
-    it("should initialize the orchestrator", async () => {
-      // Add init method if not already in the class
-      if (!orchestrator.init) {
-        orchestrator.init = vi.fn().mockResolvedValue(undefined);
-      }
-
-      await orchestrator.init();
-
-      // Verify init was called
-      expect(orchestrator.init).toHaveBeenCalled();
     });
   });
 });

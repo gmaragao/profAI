@@ -1,6 +1,6 @@
 import { ClassifiedIntent } from "@/generated/prisma";
-import { ClassifiedIntentFromAgent } from "@/Middleware/types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ClassifiedIntentFromAgent } from "./intentAgent";
 import { IntentRepository } from "./intentRepository";
 
 // Mock PrismaClient

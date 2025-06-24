@@ -1,14 +1,13 @@
-//import ProfessorAgent from "@/langchain-agent/agent";
 import { ActionRepository } from "@/Actions/actionRepository";
+import { ClassifiedIntentFromAgent } from "@/IntentAgent/intentAgent";
 import { IntentRepository } from "@/IntentAgent/intentRepository";
-import { MoodleClient } from "@/Moodle/moodleController";
+import { MoodleClient } from "@/Moodle/moodleClient";
 import { ProfessorAgent } from "@/ProfessorAgent/agent";
 import { ProfessorAgentAction } from "@/ProfessorAgent/models/action";
 import {
   ClassifierInput,
   IntentClassifier,
 } from "../IntentAgent/intentClassifier";
-import { ClassifiedIntentFromAgent } from "./types";
 
 interface OrchestratorInput {
   rawInput: any;
@@ -42,7 +41,7 @@ export class Orchestrator {
   ) {}
 
   async getForumData() {
-    const courseId = process.env.COURSE_ID ? process.env.COURSE_ID : "3"; // Replace with the actual course ID
+    const courseId = process.env.COURSE_ID || "3";
     const discussion = await this.moodleClient.getForumPosts(courseId);
 
     for (const post of discussion.posts) {
@@ -60,7 +59,7 @@ export class Orchestrator {
       };
 
       const classifiedPost =
-        await this.intentClassifier.classifyAndSummarizePosts(formattedPost);
+        await this.intentClassifier.classifyAndSummarizePost(formattedPost);
 
       try {
         await this.intentRepository.saveClassifiedIntent(classifiedPost);
@@ -78,7 +77,7 @@ export class Orchestrator {
     var sinceDate;
     if (lastIntent) {
       console.log("Last classified intent date: ", lastIntent.createdAt);
-      sinceDate = new Date(lastIntent?.createdAt); // TODO -> Verify this date
+      sinceDate = new Date(lastIntent?.createdAt);
       sinceDate.setMinutes(sinceDate.getMinutes() + 1); // Add one minute to avoid fetching the same post again
     } else {
       sinceDate = new Date(
@@ -116,7 +115,7 @@ export class Orchestrator {
       };
 
       const classifiedPost =
-        await this.intentClassifier.classifyAndSummarizePosts(formattedUpdate);
+        await this.intentClassifier.classifyAndSummarizePost(formattedUpdate);
       console.log("Classified post: ", classifiedPost);
 
       classifiedUpdates.push(classifiedPost);

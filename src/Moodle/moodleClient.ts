@@ -1,13 +1,12 @@
 import axios from "axios";
-import { config } from "../config";
 import { MoodleForumPostResponse } from "./models/forumPost";
 import { ForumPostsResponse } from "./models/moodleTypes";
 import { DetailedUpdates, MoodleUpdateResponse } from "./models/updatesSince";
 import { moodleModuleDispatchMap, MoodleModuleType } from "./moduleDispatchMap";
 
 export class MoodleClient {
-  private baseUrl = config.moodle.baseUrl;
-  private token = config.moodle.token;
+  private baseUrl = process.env.MOODLE_BASE_URL;
+  private token = process.env.MOODLE_TOKEN || "";
 
   /**
    * @description
@@ -66,7 +65,7 @@ export class MoodleClient {
       };
 
       // Fetch updates since the given timestamp
-      const response = await axios.get(this.baseUrl, { params });
+      const response = await axios.get(this.baseUrl!, { params });
       const moodleUpdateResponse: MoodleUpdateResponse = response.data;
       var instances = moodleUpdateResponse.instances || [];
 
@@ -155,7 +154,7 @@ export class MoodleClient {
       ).toString()}`;
       console.log("Fetching module details from endpoint:", url);
 
-      const response = await axios.get(this.baseUrl, { params: fullParams });
+      const response = await axios.get(this.baseUrl!, { params: fullParams });
       return response.data;
     } catch (error) {
       console.error(`Error fetching details for API: ${apiFunction}`, error);

@@ -1,5 +1,4 @@
 import { getPrismaClient } from "@/database/prismaService";
-import {} from "@/Middleware/types";
 import { ProfessorAgentAction } from "@/ProfessorAgent/models/action";
 import { PrismaClient } from "@prisma/client";
 
