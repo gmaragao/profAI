@@ -4,7 +4,7 @@ import {
 } from "@/IntentAgent/intentAgent";
 import { IntentClassifier } from "@/IntentAgent/intentClassifier";
 import { IntentRepository } from "@/IntentAgent/intentRepository";
-import { MoodleClient } from "@/Moodle/moodleClient";
+import { MoodleClient } from "@/moodle/moodleClient";
 import { ProfessorAgent } from "@/ProfessorAgent/agent";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Orchestrator } from "./orchestrator";

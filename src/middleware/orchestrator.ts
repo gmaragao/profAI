@@ -1,7 +1,7 @@
 import { ActionRepository } from "@/Actions/actionRepository";
 import { ClassifiedIntentFromAgent } from "@/IntentAgent/intentAgent";
 import { IntentRepository } from "@/IntentAgent/intentRepository";
-import { MoodleClient } from "@/Moodle/moodleClient";
+import { MoodleClient } from "@/moodle/moodleClient";
 import { ProfessorAgent } from "@/ProfessorAgent/agent";
 import { ProfessorAgentAction } from "@/ProfessorAgent/models/action";
 import {

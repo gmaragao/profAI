@@ -1,0 +1,73 @@
+@startuml ProactiveEngineWorkflow
+
+title Proactive Engine Workflow (Fluxos Juntados e Funcional)
+
+start
+
+:Run proactive engine - Cron job;
+:Get pending actions from DB;
+
+if (Has pending actions?) then (yes)
+  :Prepare action;
+  --> DoDispatchDecision
+else (no)
+  :Get updates (forum, messages, quizzes...);
+  :Classify intent and summarize;
+  :Activate agent with updates;
+
+  if (Agent needs extra data?) then (yes)
+    repeat
+      :Agent calls tools for extra data;
+      if (Agent called tools 5 times?) then (yes)
+        break
+      endif
+    repeat while (Needs more data?)
+  endif
+
+  if (Agent suggests actions?) then (yes)
+    :Create suggested actions with confidence, priority, due date;
+    if (Confidence > 0.7?) then (yes)
+      --> DoDispatchDecision
+    else (no)
+      :Discard action;
+      stop
+    endif
+  else (no)
+    stop
+  endif
+endif
+
+stop
+
+' ======= Dispatch Decision Block =======
+
+partition "Dispatch Decision" {
+
+if (Due date now/past?) then (yes)
+  --> ExecuteAction
+else (no)
+  if (Priority > 0.7?) then (yes)
+    --> ExecuteAction
+  else (no)
+    if (Tries > 3?) then (yes)
+      --> ExecuteAction
+    else (no)
+      :Increase tries;
+      :Save action for later;
+    endif
+  endif
+endif
+
+}
+
+' ======= Execute Action Block =======
+
+partition "Execute Action" {
+
+:Dispatch action (forum post, quiz, DM);
+:Send response to Moodle;
+:Log action taken;
+
+}
+
+@enduml

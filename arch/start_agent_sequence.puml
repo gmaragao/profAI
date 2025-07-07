@@ -17,8 +17,8 @@ AgentConfigurator --> User : displayMessage(agentStartedMessage)
 
 == 2. Stop Agent ==
 User -> AgentConfigurator : stopAgent()
-UIController -> Orchestrator : stopAgent()
 AgentConfigurator -> UIController : stopAgent()
+UIController -> Orchestrator : stopAgent()
 Orchestrator --> UIController : agentStoppedMessage
 UIController --> AgentConfigurator : agentStoppedMessage
 AgentConfigurator --> User : displayMessage(agentStoppedMessage)

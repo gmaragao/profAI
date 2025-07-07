@@ -1,0 +1,85 @@
+@startuml ProactiveEngineWorkflow
+
+
+title Proactive Engine Workflow
+
+start
+
+:Run proactive engine - Cron job;
+
+:Get pending actions from DB;
+
+if (Are there pending actions to trigger?) then (yes)
+  if (Is action due date set and date is now or past?) then (yes)
+    :Dispatch action: forum post, quizz, DM;
+    :Send response to Moodle;
+    :Log action taken;
+  else (no)
+    :Evaluate priority level;
+    if (Priority > 0.7?) then (yes)
+      :Dispatch action: forum post, quizz, DM;
+      :Send response to Moodle;
+      :Log action taken;
+    else (no)
+      if (Action Tries > 3) then (yes)
+        :Dispatch action: forum post, quizz, DM;
+        :Send response to Moodle;
+        :Log action taken;
+      else (no)
+        :Increase action counter tries;
+        :Save action for later, with optional trigger date;
+      endif
+    endif
+  endif
+else (no)
+  :Get updates on: forum, messages, quizzes...;
+  :Classify intent and summarize content;
+  :Activate agent with updates;
+  
+  if (Does agent require extra data to evaluate actions?) then (yes)
+    repeat
+      :Agent calls tools to get extra data to help decision on creating action;
+      if (Agent called tools 5 times?) then (yes)
+        break
+        else (no)
+      endif
+    repeat while (Agent requires more data) is (yes) not (no)
+    else (no)
+  endif
+  
+  if (Agent suggests actions?) then (yes)
+    :Create suggested actions with confidence and priority or due date;
+    
+    if (Action confidence > 0.7?) then (yes)
+      if (Is action due date set and date is now or past?) then (yes)
+        :Dispatch action: forum post, quizz, DM;
+      else (no)
+        :Evaluate priority level;
+        if (Priority > 0.7?) then (yes)
+          :Dispatch action: forum post, quizz, DM;
+        else (no)
+          if (Action Tries > 3) then (yes)
+            :Dispatch action: forum post, quizz, DM;
+          else (no)
+            :Increase action counter tries;
+            :Save action for later, with optional trigger date;
+            stop
+          endif
+        endif
+      endif
+      
+      :Send response to Moodle;
+      :Log action taken;
+      
+    else (no)
+      :Discard action;
+      stop
+    endif
+  else (no)
+    stop
+  endif
+endif
+
+stop
+
+@enduml

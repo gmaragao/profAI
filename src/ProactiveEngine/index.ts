@@ -1,4 +1,4 @@
-import { Orchestrator } from "@/Middleware/orchestrator";
+import { Orchestrator } from "@/middleware/orchestrator";
 import cron from "node-cron";
 
 export class ProactiveEngine {
