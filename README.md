@@ -58,7 +58,7 @@ CRON_FREQUENCY_MINUTES="1" # Default: Every 1 minute
 Navigate to the database directory:
 
 ```bash
-cd src/database
+cd src/database/mongo
 ```
 
 Run:
@@ -99,6 +99,8 @@ Install Ollama from [ollama.ai](https://ollama.ai/) and pull the required model:
 ollama pull llama3-groq-tool-use
 ollama pull gemma3:4b
 ```
+
+Keep ollama instance open in order to have the models running on the background.
 
 ### 7. Configure Moodle
 
